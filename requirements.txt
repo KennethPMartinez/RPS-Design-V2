@@ -1,0 +1,8 @@
+PySide6>=6.6
+pyqtgraph>=0.13.3
+numpy
+openpyxl
+imageio
+imageio-ffmpeg
+# opcional (modo GPU/Híbrido): cupy-cuda12x
+pyserial   # solo si se usa el motor real
