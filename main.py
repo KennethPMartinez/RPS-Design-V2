@@ -42,7 +42,7 @@ def main() -> int:
     app = QtWidgets.QApplication(sys.argv)
     sys.excepthook = lambda t, v, tb: _mostrar_error(
         "Error inesperado", "".join(traceback.format_exception(t, v, tb)))
-
+#xd
     faltan = localizar_modulos_ui()
     if faltan:
         _mostrar_error(
