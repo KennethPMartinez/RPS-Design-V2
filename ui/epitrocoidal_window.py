@@ -44,9 +44,9 @@ from utils import file_handler
 from widgets.pg_helpers import AngleControl, reemplazar_widget
 from widgets.simulation_view import SimulationView
 
-from EpitrocoidalV2 import Ui_EpitrocoidalV2   # noqa: E402
+from Epi_HipotrocoidalV2 import Ui_Epi_HipotrocoidalV2   # noqa: E402
 
-FPS_VIDEO = 30
+FPS_VIDEO = 120
 
 
 class VentanaEpitrocoidalV2(QtWidgets.QMainWindow):
@@ -70,7 +70,7 @@ class VentanaEpitrocoidalV2(QtWidgets.QMainWindow):
         self._t_ultimo = 0.0
         self._t_msg = 0.0
 
-        self.ui = Ui_EpitrocoidalV2()
+        self.ui = Ui_Epi_HipotrocoidalV2()
         self.ui.setupUi(self)
         self.sim = reemplazar_widget(self.ui.graphicsView_epi, SimulationView())
         self.control = AngleControl(self.ui.dial_posicion_theta, self.ui.doubleSpinBox_posicion_theta, self)
