@@ -73,6 +73,7 @@ Engine: `motion_engine`, `motor_plan`, `contact_engine` (θ=0 exacto), `rollerpi
 ## 6.2. Respuesta a pendientes
 
 - Se realizo la prueba visual de la operación del aplicativo y funciona adecuadamente, sin embargo el muestreo de los contactos para la ventana hipotrocoidal es de poca resolución en la raiz del diente y produce "saltos".
+- La ventana trocoidal requiere revisión en el modo automático porque al ejecutar la simulación nada evita que el piñón se salga del mecanismo (la posición angular no debe superar la máxima para que según tu ecuación de desplazamiento supere la longitud de la cremallera. Esto debería funcionar de acuerdo con L de la cremallera, es decir, los presets deben poder cambiar de acuerdo con L)
 
 ---
 
