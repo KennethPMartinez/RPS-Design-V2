@@ -2,19 +2,14 @@
 """
 ui/velocity_profile_window.py
 
-Controlador de Perfildevelocidad_simulador_Window ("Editar línea de tiempo"): editor del
-perfil de giro de la rueda motriz para el modo AUTOMÁTICO. Funciona como
-wheel_motion_studio_active.py pero sobre la UI de Qt Designer y con el modelo/motores de
-engine/motion_engine.py (sin lógica de movimiento aquí: esta ventana solo edita datos).
+Controlador de Perfildevelocidad_simulador_Window ("Editar línea de tiempo"): editor del perfil de
+giro de la rueda motriz para el modo AUTOMÁTICO (modelo/motores en engine/motion_engine.py).
 
-  Aceptar  -> emite `perfilAceptado(PerfilMovimiento)` y cierra (la ventana principal lo aplica).
-  Cancelar -> cierra sin cambios.
+  Aceptar  -> emite `perfilAceptado(PerfilMovimiento)` y cierra.   Cancelar -> cierra sin cambios.
 
-Páginas del QStackedWidget (parámetros de la ley seleccionada):
-  0 rampas (pendiente) · 1 sinusoidal · 2 polinómica (coeficientes) ·
-  3 lista de puntos (ajuste polinómico) · 4 spline
-La PROPIEDAD de entrada (Posición/Velocidad/Aceleración) la fija el preset: la UI actual no
-tiene un selector para ella.
+Páginas del QStackedWidget: 0 rampas · 1 sinusoidal · 2 polinómica · 3 lista de puntos · 4 spline.
+Menú contextual de la gráfica: en español, con Transformadas (FFT, derivada, integral) que solo
+cambian lo que se DIBUJA; el perfil no se toca.
 """
 from __future__ import annotations
 
@@ -23,12 +18,14 @@ import csv
 import json
 from pathlib import Path
 
+import numpy as np
 import pyqtgraph as pg
 from PySide6 import QtCore, QtWidgets
 
 from engine.motion_engine import (LEYES, MAX_COEFICIENTES, UNIDADES, FabricaPresets, LineaTiempo,
                                   PerfilMovimiento, RegistroLeyes, Tramo)
 from ui.errores import manejador_seguro
+from widgets.plot_menu import etiqueta_eje_x, transformar
 from widgets.pg_helpers import (InspectorCurvas, configurar_menu_plot, desactivar_clic_leyenda, embeber_en_contenedor,
                                 reemplazar_widget)
 from widgets.wheel_widget import WheelWidget
@@ -67,17 +64,16 @@ class VentanaPerfilVelocidad(QtWidgets.QMainWindow):
         self.timer.setInterval(16)
         self.timer.timeout.connect(self._tick)
 
-    # ------------------------------------------------------------------
-    # Construcción
-    # ------------------------------------------------------------------
+    # ------------------------------------------------------------------ construcción
     def _construir_widgets(self):
         u = self.ui
         self.plot = pg.PlotWidget()
         self.plot.showGrid(x=True, y=True, alpha=0.25)
         self.plot.setLabel("bottom", "Tiempo", units="s")
         self.plot.hideButtons()                      # sin el botón "A" (autorango) de pyqtgraph
-        desactivar_clic_leyenda(self.plot.addLegend(offset=(10, 10)))   # mostrar/ocultar: solo los checkbox
-        configurar_menu_plot(self.plot, "linea_de_tiempo")
+        desactivar_clic_leyenda(self.plot.addLegend(offset=(10, 10)))
+        configurar_menu_plot(self.plot, "linea_de_tiempo", transformadas=True)
+        self.plot._menu.transformadaCambiada.connect(self._transformada_cambiada)
         self.curvas = {
             "Posición": self.plot.plot(pen=pg.mkPen((192, 57, 43), width=1.4), name="Posición"),
             "Velocidad": self.plot.plot(pen=pg.mkPen((44, 160, 44), width=1.6), name="Velocidad"),
@@ -146,9 +142,7 @@ class VentanaPerfilVelocidad(QtWidgets.QMainWindow):
         u.actionGu_a_Tecnica.triggered.connect(lambda: QtWidgets.QMessageBox.information(
             self, "Guía técnica", "La guía técnica se desarrollará más adelante."))
 
-    # ------------------------------------------------------------------
-    # Selección y listas
-    # ------------------------------------------------------------------
+    # ------------------------------------------------------------------ selección y listas
     def _tramo(self):
         i = self.ui.listWidget_tramo.currentRow()
         return self.perfil.tramos[i] if 0 <= i < len(self.perfil.tramos) else None
@@ -208,9 +202,7 @@ class VentanaPerfilVelocidad(QtWidgets.QMainWindow):
         if not self._cargando:
             self._mostrar_params()
 
-    # ------------------------------------------------------------------
-    # Parámetros de la ley seleccionada
-    # ------------------------------------------------------------------
+    # ------------------------------------------------------------------ parámetros de la ley
     def _mostrar_params(self):
         u, t, ley = self.ui, self._tramo(), self._ley()
         self._cargando = True
@@ -314,9 +306,7 @@ class VentanaPerfilVelocidad(QtWidgets.QMainWindow):
                           if tabla is self.ui.tableWidget_coeficientes else None)
         self._params_cambiados()
 
-    # ------------------------------------------------------------------
-    # Tramos y leyes
-    # ------------------------------------------------------------------
+    # ------------------------------------------------------------------ tramos y leyes
     @manejador_seguro
     def _intervalo_cambiado(self, *_):
         t = self._tramo()
@@ -363,8 +353,7 @@ class VentanaPerfilVelocidad(QtWidgets.QMainWindow):
         self._recalcular()
 
     def _nueva(self, nombre, t, aditiva):
-        ley = self.reg.nueva_ley(nombre, t, aditiva)
-        return ley
+        return self.reg.nueva_ley(nombre, t, aditiva)
 
     @manejador_seguro
     def _poner_ley(self, *_):
@@ -418,9 +407,7 @@ class VentanaPerfilVelocidad(QtWidgets.QMainWindow):
         for nombre, c in self.checks.items():
             c.blockSignals(True); c.setChecked(nombre == self.perfil.propiedad); c.blockSignals(False)
 
-    # ------------------------------------------------------------------
-    # Cálculo y gráficas
-    # ------------------------------------------------------------------
+    # ------------------------------------------------------------------ cálculo y gráficas
     def _recalcular(self):
         try:
             self.lt = LineaTiempo.construir(self.perfil, self.reg, 1600)
@@ -439,25 +426,33 @@ class VentanaPerfilVelocidad(QtWidgets.QMainWindow):
         self._mostrar_tiempo(self._t)
 
     def _actualizar_curvas(self, *_):
+        """Dibuja las curvas aplicando la transformada elegida en el menú contextual (solo visual)."""
         if self.lt is None:
             return
+        modo = self.plot._menu.modo_transformada
         datos = {"Posición": self.lt.pos, "Velocidad": self.lt.vel, "Aceleración": self.lt.acc}
         for nombre, curva in self.curvas.items():
-            curva.setData(self.lt.t, datos[nombre])
+            x, y = transformar(modo, self.lt.t, datos[nombre])
+            curva.setData(x, y)
             curva.setVisible(self.checks[nombre].isChecked())
+        self.marca_tramo.setVisible(modo == "ninguna")      # las marcas de tramo solo tienen sentido en el tiempo
+
+    @manejador_seguro
+    def _transformada_cambiada(self, modo: str):
+        etiqueta, unidad = etiqueta_eje_x(modo)
+        self.plot.setLabel("bottom", etiqueta, units=unidad)
+        self._actualizar_curvas()
+        self.plot._menu.ver_todo()
 
     def _actualizar_marcas(self):
         t = self._tramo()
         if self.lt is None or t is None:
             return
         v = {"Posición": self.lt.pos, "Velocidad": self.lt.vel, "Aceleración": self.lt.acc}[self.perfil.propiedad]
-        import numpy as np
         ys = np.interp([t.inicio, t.fin], self.lt.t, v)
         self.marca_tramo.setData([t.inicio, t.fin], list(ys))
 
-    # ------------------------------------------------------------------
-    # Reproducción
-    # ------------------------------------------------------------------
+    # ------------------------------------------------------------------ reproducción
     def _mostrar_tiempo(self, t: float):
         if self.lt is None:
             return
@@ -497,9 +492,7 @@ class VentanaPerfilVelocidad(QtWidgets.QMainWindow):
             self._pausar()
         self._mostrar_tiempo(t)
 
-    # ------------------------------------------------------------------
-    # Archivo
-    # ------------------------------------------------------------------
+    # ------------------------------------------------------------------ archivo
     @manejador_seguro
     def _aceptar(self, *_):
         self.perfil.validar()

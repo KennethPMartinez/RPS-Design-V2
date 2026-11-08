@@ -1,0 +1,544 @@
+# -*- coding: utf-8 -*-
+"""
+ui/sistema_base.py
+
+Clase base de las ventanas de sistema de V2 (Epitrocoidal, Hipotrocoidal, Trocoidal). Contiene TODO lo
+común (principio DRY): debounce de recálculo, modo Manual/Automático, línea de tiempo, motor real,
+grabación de video, abrir/guardar/exportar, resumen de diseño, ventanas de propiedades y
+visibilidad. Cada sistema concreto solo declara sus clases/widgets y los pocos "ganchos" que cambian:
+
+  _crear_control()            control manual (AngleControl o ControlLineal)
+  _widgets_control_manual()   widgets que se deshabilitan en modo Automático
+  _valor_desde_angulo / _angulo_desde_valor   conversión control <-> ángulo del piñón (°)
+  _resolver_estado(alt, ang)  EstadoCinematico (angular o lineal)
+  _curva_base(motor)          curva generatriz base, ya en el marco de vista
+  _preparar_ui()              ajustes de textos/valores propios del sistema
+
+Arquitectura: la UI solo lee/valida parámetros (dataclasses), el engine calcula, los widgets dibujan.
+El perfil de la línea de tiempo es SIEMPRE el ángulo del piñón (°); en Trocoidal, X = prrp·θ.
+"""
+from __future__ import annotations
+
+import copy
+import time
+
+import numpy as np
+from PySide6 import QtCore, QtWidgets
+
+from config.app_settings import ajustes
+from config.data_structures import AjustesVisibilidadSimulacion
+from dialogs.design_summary_dialog import DialogoResumenDiseno
+from engine.cinematica_engine import SolverCinematico
+from engine.motion_engine import PRESET_DEFECTO, FabricaPresets, LineaTiempo, RegistroLeyes
+from engine.motor_plan import plan_alineacion, planificar
+from exporters.excel_exporter import exportar_excel
+from exporters.video_recorder import GrabadorVideo
+from hardware.motor_controller import obtener_controlador
+from ui.errores import manejador_seguro
+from ui.property_windows import VentanaPerfilDiente, VentanaPropiedad
+from ui.settings_window import SettingsWindow
+from ui.velocity_profile_window import VentanaPerfilVelocidad
+from utils import file_handler
+from widgets.pg_helpers import reemplazar_widget
+from widgets.simulation_view import SimulationView
+
+FPS_VIDEO = 30
+
+
+class VentanaSistemaBase(QtWidgets.QMainWindow):
+    # ---- a definir en cada sistema ----
+    SISTEMA = ""                       # clave en los archivos de proyecto
+    NOMBRE = ""
+    CLASE_UI = None                    # clase Ui_* generada por Qt Designer
+    CLASE_PARAMETROS = None
+    CLASE_MOTOR = None
+    CLASE_DIALOGO_VISIBILIDAD = None
+    MAPEO_PARAMETROS: tuple = ()       # (campo del dataclass, objectName del spinbox)
+    LINEAL = False
+    ARCHIVO_EXCEL = "sistema.xlsx"
+
+    perfilActualizado = QtCore.Signal(object)   # ResultadoPerfil (con patrón y análisis)
+
+    def __init__(self, retorno=None):
+        super().__init__()
+        self._retorno = retorno
+        self.motor_actual = None
+        self.perfil_actual = None
+        self._solver = None
+        self.vis = AjustesVisibilidadSimulacion()
+        self._dlg_vis = None
+        self._editor = None
+        self._aux: list = []
+        self._ruta = None
+        self.perfil_mov_defecto = FabricaPresets.crear(PRESET_DEFECTO)
+        self.perfil_mov = copy.deepcopy(self.perfil_mov_defecto)
+        self.linea_tiempo: LineaTiempo | None = None
+        self._t = 0.0
+        self._t_ultimo = 0.0
+        self._t_msg = 0.0
+
+        self.ui = self.CLASE_UI()
+        self.ui.setupUi(self)
+        self._preparar_ui()
+        self.sim = reemplazar_widget(self.ui.graphicsView_epi, SimulationView())
+        self.control = self._crear_control()
+
+        self._debounce = QtCore.QTimer(self, singleShot=True, interval=150)
+        self._debounce.timeout.connect(self._recalcular)
+        self._anim = QtCore.QTimer(self)
+        self._anim.setTimerType(QtCore.Qt.TimerType.PreciseTimer)
+        self._anim.setInterval(8)
+        self._anim.timeout.connect(self._tick)
+
+        self.motor_ctrl = obtener_controlador()
+        self.motor_ctrl.terminado.connect(self._motor_terminado)
+        self.motor_ctrl.progreso.connect(self._motor_progreso)
+        self._conectar()
+        self._aplicar_modo()
+        self._recalcular()
+
+    # ------------------------------------------------------------------ ganchos (cada sistema)
+    def _preparar_ui(self):
+        pass
+
+    def _crear_control(self):
+        raise NotImplementedError
+
+    def _widgets_control_manual(self) -> tuple:
+        raise NotImplementedError
+
+    def _valor_desde_angulo(self, angulo_grados: float) -> float:
+        return angulo_grados
+
+    def _angulo_desde_valor(self, valor: float) -> float:
+        return valor
+
+    def _resolver_estado(self, alterno: bool, angulo_grados: float):
+        raise NotImplementedError
+
+    def _curva_base(self, motor):
+        raise NotImplementedError
+
+    def _refrescar_indicadores(self, angulo_grados: float):
+        pass
+
+    def _actualizar_rango_control(self, parametros):
+        pass
+
+    # ------------------------------------------------------------------ conexiones
+    def _spins(self) -> tuple:
+        return tuple(getattr(self.ui, nombre) for _, nombre in self.MAPEO_PARAMETROS)
+
+    def _conectar(self):
+        u = self.ui
+        for sp in self._spins():
+            sp.valueChanged.connect(lambda *_: self._debounce.start())
+        self.control.cambiado.connect(lambda *_: self._emitir_estado())
+        u.comboBox_modo_pinon.currentIndexChanged.connect(lambda *_: self._modo_pinon_cambiado())
+        u.comboBox_modo_sim.currentIndexChanged.connect(lambda *_: self._aplicar_modo())
+        u.pushButton_mostrar_ocultar.clicked.connect(lambda *_: self._abrir_visibilidad())
+        u.pushButton_sim_reset.clicked.connect(lambda *_: self._reset())
+        u.pushButton_anim_play.clicked.connect(lambda *_: self._play())
+        u.pushButton_anim_pause.clicked.connect(lambda *_: self._pausar())
+        u.pushButton_restart.clicked.connect(lambda *_: self._reiniciar())
+        u.pushButton_record.clicked.connect(lambda *_: self._grabar())
+        u.Editarlineadetiempo_button.clicked.connect(lambda *_: self._editar_linea_tiempo())
+        u.checkBox_valpredeterminados.toggled.connect(self._predeterminado_cambiado)
+        u.actionAbrir.triggered.connect(lambda *_: self._abrir())
+        u.actionGuardar.triggered.connect(lambda *_: self._guardar())
+        u.actionExportar.triggered.connect(lambda *_: self._exportar())
+        u.actionConfiguraci_n.triggered.connect(lambda *_: SettingsWindow(self).exec())
+        u.actionCerrar.triggered.connect(lambda *_: self.volver_al_menu())
+        u.actionGu_a_T_cnica.triggered.connect(lambda *_: QtWidgets.QMessageBox.information(
+            self, "Guía técnica", "La guía técnica se desarrollará más adelante."))
+        u.actionResumen_de_Dise_o.triggered.connect(lambda *_: self._resumen())
+        u.actionPerfil_del_diente.triggered.connect(lambda *_: self._abrir_aux(lambda: VentanaPerfilDiente(self)))
+        u.action_ngulo_de_Presi_n.triggered.connect(lambda *_: self._abrir_aux(lambda: VentanaPropiedad(self, "angulo")))
+        u.actionRadio_de_Curvatura.triggered.connect(lambda *_: self._abrir_aux(lambda: VentanaPropiedad(self, "curvatura")))
+        u.actionCamino_de_Contacto.triggered.connect(lambda *_: self._abrir_aux(lambda: VentanaPropiedad(self, "contacto")))
+
+    # ------------------------------------------------------------------ parámetros y motor
+    def leer_parametros(self):
+        return self.CLASE_PARAMETROS(**{campo: getattr(self.ui, nombre).value()
+                                        for campo, nombre in self.MAPEO_PARAMETROS})
+
+    def _escribir_parametros(self, p) -> None:
+        for campo, nombre in self.MAPEO_PARAMETROS:
+            sp = getattr(self.ui, nombre)
+            sp.blockSignals(True); sp.setValue(getattr(p, campo)); sp.blockSignals(False)
+
+    @manejador_seguro
+    def _recalcular(self, *_):
+        p = self.leer_parametros()
+        if not p.es_valido():
+            self.statusBar().showMessage("Parámetros fuera de rango: la geometría no se recalcula.", 4000)
+            return
+        motor = self.CLASE_MOTOR(p)
+        res = motor.generar_patron()          # incluye el análisis del perfil (1 sola pasada)
+        self.motor_actual, self.perfil_actual = motor, res
+        self._solver = SolverCinematico(motor.contexto)
+        self._actualizar_rango_control(p)
+        self.sim.set_geometria(res)
+        self.sim.set_curva_base(*self._curva_base(motor))
+        self.perfilActualizado.emit(res)
+        self._emitir_estado()
+
+    # ------------------------------------------------------------------ estado de la simulación
+    def _modo_pinon_cambiado(self):
+        if self._dlg_vis is not None:
+            self._dlg_vis.actualizar_modo(self.ui.comboBox_modo_pinon.currentIndex() == 1)
+        self._emitir_estado()
+
+    def _es_auto(self) -> bool:
+        return self.ui.comboBox_modo_sim.currentIndex() == 1
+
+    def _angulo_motor(self) -> float:
+        """Ángulo del piñón (°) según el modo: línea de tiempo o control manual."""
+        if self._es_auto() and self.linea_tiempo is not None:
+            return self.linea_tiempo.posicion_en(self._t)
+        return self._angulo_desde_valor(self.control.acumulado)
+
+    def _estado_para(self, angulo_grados: float):
+        alt = self.ui.comboBox_modo_pinon.currentIndex() == 1
+        est = self._resolver_estado(alt, angulo_grados)
+        cont = self.motor_actual.rodillos_en_contacto(
+            est.angulo_relativo_generatriz_rad, modo_pinon_alterno=alt, estado_cinematico=est)
+        return est, cont
+
+    def contactos_para_propiedad(self, valor_control: float) -> list:
+        """Contactos con el piñón en modo FIJO y el control en `valor_control` (θ° o X mm). Los usan
+        las ventanas de propiedades (marcan los rodillos activos sobre sus gráficas)."""
+        est = self._resolver_estado(False, self._angulo_desde_valor(valor_control))
+        return self.motor_actual.rodillos_en_contacto(
+            est.angulo_relativo_generatriz_rad, modo_pinon_alterno=False, estado_cinematico=est)
+
+    @manejador_seguro
+    def _emitir_estado(self, *_):
+        if self.motor_actual is None:
+            return
+        ang = self._angulo_motor()
+        self._refrescar_indicadores(ang)
+        self.sim.actualizar(*self._estado_para(ang))
+
+    # ------------------------------------------------------------------ Manual / Automático
+    @manejador_seguro
+    def _aplicar_modo(self, *_):
+        auto = self._es_auto()
+        u = self.ui
+        self._pausar()
+        if auto:
+            self._construir_linea_tiempo()
+            self._t = self.linea_tiempo.t_ini if self.linea_tiempo else 0.0
+        elif self.linea_tiempo is not None:
+            self.control.reiniciar(self._valor_desde_angulo(self.linea_tiempo.posicion_en(self._t)))
+        for w in self._widgets_control_manual():
+            w.setEnabled(not auto)
+        for w in (u.frame_anim_controls, u.Editarlineadetiempo_button, u.checkBox_valpredeterminados):
+            w.setEnabled(auto)
+        self._emitir_estado()
+
+    def _construir_linea_tiempo(self):
+        try:
+            self.linea_tiempo = LineaTiempo.construir(self.perfil_mov, RegistroLeyes())
+            if self.linea_tiempo.errores:
+                self.statusBar().showMessage("Aviso: " + " | ".join(self.linea_tiempo.errores[-3:]), 6000)
+        except Exception as e:
+            self.linea_tiempo = None
+            self.statusBar().showMessage(f"Perfil de giro inválido: {e}", 6000)
+
+    @manejador_seguro
+    def _predeterminado_cambiado(self, marcado: bool):
+        if marcado:
+            self.perfil_mov = copy.deepcopy(self.perfil_mov_defecto)
+            self._reconstruir_auto()
+
+    def _reconstruir_auto(self):
+        self._pausar()
+        self._construir_linea_tiempo()
+        self._t = self.linea_tiempo.t_ini if self.linea_tiempo else 0.0
+        self._mostrar_auto()
+
+    @manejador_seguro
+    def _editar_linea_tiempo(self, *_):
+        self._editor = VentanaPerfilVelocidad(self.perfil_mov, self)
+        self._editor.perfilAceptado.connect(self._perfil_aceptado)
+        self._editor.show()
+
+    @manejador_seguro
+    def _perfil_aceptado(self, perfil):
+        self.perfil_mov = perfil
+        chk = self.ui.checkBox_valpredeterminados
+        chk.blockSignals(True); chk.setChecked(False); chk.blockSignals(False)
+        self._reconstruir_auto()
+
+    # -- reproducción + motor real --------------------------------------
+    def _motor_activo(self) -> bool:
+        return ajustes.motor.habilitado and self._es_auto()
+
+    @manejador_seguro
+    def _play(self, *_):
+        lt = self.linea_tiempo
+        if not self._es_auto() or lt is None or self._anim.isActive():
+            return
+        if self._t >= lt.t_fin:
+            self._t = lt.t_ini
+        if self._motor_activo():
+            ctrl, aj = self.motor_ctrl, ajustes.motor
+            if not ctrl.conectado:
+                QtWidgets.QMessageBox.information(self, "Motor", "El motor está habilitado pero no conectado.\n"
+                                                  "Conéctalo en Archivo → Ajustes.")
+                return
+            if ctrl.ocupado():
+                self.statusBar().showMessage("Esperando a que el motor termine de detenerse…", 3000)
+                return
+            error = lt.posicion_en(self._t) - ctrl.pos_deg
+            if abs(error) > aj.tolerancia_silenciosa_deg:
+                r = self._preguntar_desfase(error)
+                if r == "cancelar":
+                    return
+                if r == "alinear":
+                    self.statusBar().showMessage(f"Alineando el motor ({error:+.1f}°)…")
+                    ctrl.ejecutar([plan_alineacion(error, aj)], "alineacion")
+                    return                      # la simulación arranca al terminar la alineación
+                ctrl.referenciar(lt.posicion_en(self._t))
+        self._arrancar()
+
+    def _preguntar_desfase(self, error: float) -> str:
+        m = QtWidgets.QMessageBox(self)
+        m.setWindowTitle("Motor desalineado")
+        m.setText(f"La posición estimada del motor difiere {error:+.1f}° de la simulación.")
+        b_al = m.addButton("Alinear (mover el motor)", QtWidgets.QMessageBox.ButtonRole.AcceptRole)
+        b_ref = m.addButton("Tomar la posición actual como referencia", QtWidgets.QMessageBox.ButtonRole.ActionRole)
+        m.addButton("Cancelar", QtWidgets.QMessageBox.ButtonRole.RejectRole)
+        m.exec()
+        return {b_al: "alinear", b_ref: "referenciar"}.get(m.clickedButton(), "cancelar")
+
+    def _arrancar(self):
+        lt = self.linea_tiempo
+        if self._motor_activo() and self.motor_ctrl.conectado:
+            segs, avisos = planificar(lt, self._t, self.motor_ctrl.pos_deg, ajustes.motor)
+            if avisos:
+                self.statusBar().showMessage("Motor: " + " ".join(avisos), 8000)
+            self.motor_ctrl.ejecutar(segs, "perfil")
+        self._t_ultimo = time.perf_counter()
+        self._anim.start()
+
+    @manejador_seguro
+    def _motor_terminado(self, ok: bool, msg: str, etiqueta: str):
+        if etiqueta == "alineacion":
+            if ok and self._es_auto():
+                self._arrancar()
+            elif msg:
+                QtWidgets.QMessageBox.warning(self, "Motor", f"Falló la alineación:\n{msg}")
+        elif not ok and msg:                    # error real (no una parada pedida por el usuario)
+            self._pausar(detener_motor=False)
+            QtWidgets.QMessageBox.warning(self, "Motor", f"El motor reportó un error y se detuvo la simulación:\n{msg}")
+
+    def _motor_progreso(self, i: int, n: int):
+        if self._anim.isActive():
+            self.statusBar().showMessage(f"Motor: tramo {i}/{n}", 1500)
+
+    def _pausar(self, detener_motor: bool = True):
+        corriendo = self._anim.isActive()
+        self._anim.stop()
+        if detener_motor:
+            estaba = self.motor_ctrl.ocupado()
+            self.motor_ctrl.detener()
+            if corriendo and estaba and self.linea_tiempo is not None and self._es_auto():
+                self._resincronizar_con_motor()
+
+    def _resincronizar_con_motor(self):
+        """Tras pausar, el motor queda donde lo dejó la parada (estimado) y va por detrás de la
+        simulación: se retrocede el tiempo hasta el instante cuya posición coincide con el motor."""
+        lt, dt = self.linea_tiempo, 2.0 * ajustes.motor.dt_segmento
+        idx = np.flatnonzero((lt.t <= self._t + dt) & (lt.t >= self._t - dt))
+        if idx.size:
+            k = idx[int(np.argmin(np.abs(lt.pos[idx] - self.motor_ctrl.pos_deg)))]
+            self._t = float(lt.t[k])
+            self._mostrar_auto()
+
+    def _reiniciar(self):
+        self._pausar()
+        if self.linea_tiempo is not None:
+            self._t = self.linea_tiempo.t_ini
+            self._mostrar_auto()
+
+    @manejador_seguro
+    def _tick(self, *_):
+        ahora = time.perf_counter()
+        self._t += ahora - self._t_ultimo     # reloj real: la velocidad no depende del FPS
+        self._t_ultimo = ahora
+        if self._t >= self.linea_tiempo.t_fin:
+            self._t = self.linea_tiempo.t_fin
+            self._pausar(detener_motor=False)      # el último tramo del motor termina solo
+        self._mostrar_auto()
+
+    def _mostrar_auto(self):
+        if self.linea_tiempo is None:
+            return
+        ang = self.linea_tiempo.posicion_en(self._t)
+        self.control.mostrar(self._valor_desde_angulo(ang))
+        self._emitir_estado()
+        ahora = time.perf_counter()
+        if ahora - self._t_msg > 0.1:
+            self.statusBar().showMessage(f"t = {self._t:6.2f} s   ·   θ motor = {ang:9.2f}°")
+            self._t_msg = ahora
+
+    @manejador_seguro
+    def _reset(self, *_):
+        if self._es_auto():
+            self._reiniciar()
+        else:
+            self.control.reiniciar(0.0)
+            self._emitir_estado()
+        self.sim.resetear_camara()
+
+    # -- grabación ------------------------------------------------------
+    @manejador_seguro
+    def _grabar(self, *_):
+        lt = self.linea_tiempo
+        if not self._es_auto() or lt is None or self.motor_actual is None:
+            return
+        ruta, _f = QtWidgets.QFileDialog.getSaveFileName(self, "Guardar video de la simulación",
+                                                         "simulacion.mp4", "Video MP4 (*.mp4)")
+        if not ruta:
+            return
+        self._pausar()
+        t_prev = self._t
+        n = int(lt.duracion * FPS_VIDEO) + 1
+        angulos = lt.posiciones_en(lt.t_ini + np.arange(n) / FPS_VIDEO)     # vectorizado (xp según hardware)
+        prog = QtWidgets.QProgressDialog("Grabando video…", "Cancelar", 0, n, self)
+        prog.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
+        prog.setMinimumDuration(0)
+        grab = GrabadorVideo(ruta, FPS_VIDEO)
+        cancelado = False
+        self.sim.lbl_fps.hide()
+        gl = ajustes.render_opengl
+        if gl:                       # widget.grab() es fiable con viewport por software
+            self.sim.useOpenGL(False)
+        try:
+            for k in range(n):
+                if prog.wasCanceled():
+                    cancelado = True
+                    break
+                self.sim.actualizar(*self._estado_para(float(angulos[k])))
+                grab.agregar(self.sim.fotograma())
+                prog.setValue(k + 1)
+        finally:
+            grab.cerrar()
+            prog.close()
+            self.sim.lbl_fps.show()
+            if gl:
+                self.sim.useOpenGL(True)
+            self._t = t_prev
+            self._mostrar_auto()
+        if cancelado:
+            import os
+            os.remove(ruta)
+            self.statusBar().showMessage("Grabación cancelada.", 4000)
+        else:
+            QtWidgets.QMessageBox.information(self, "Video guardado", f"Se guardó el video:\n{ruta}")
+
+    # ------------------------------------------------------------------ menú: archivo
+    def _sim_dict(self) -> dict:
+        return {"modo": self.ui.comboBox_modo_sim.currentIndex(),
+                "modo_pinon": self.ui.comboBox_modo_pinon.currentIndex(),
+                "valor_manual": self.control.acumulado,      # θ (°) en angular · X (mm) en lineal
+                "predeterminado": self.ui.checkBox_valpredeterminados.isChecked()}
+
+    @manejador_seguro
+    def _guardar(self, *_):
+        ruta = self._ruta
+        if not ruta:
+            ruta, _f = QtWidgets.QFileDialog.getSaveFileName(self, "Guardar proyecto", "proyecto.json", "Proyecto RPS (*.json)")
+        if not ruta:
+            return
+        pm = None if self.ui.checkBox_valpredeterminados.isChecked() else self.perfil_mov
+        file_handler.guardar_proyecto(ruta, self.SISTEMA, self.leer_parametros(), self._sim_dict(), pm, self.vis)
+        self._ruta = ruta
+        self.statusBar().showMessage(f"Proyecto guardado: {ruta}", 5000)
+
+    @manejador_seguro
+    def _abrir(self, *_):
+        ruta, _f = QtWidgets.QFileDialog.getOpenFileName(self, "Abrir proyecto", "", "Proyecto RPS (*.json)")
+        if not ruta:
+            return
+        try:
+            d = file_handler.abrir_proyecto(ruta, self.SISTEMA)
+        except file_handler.ArchivoInvalido as e:
+            QtWidgets.QMessageBox.warning(self, "Abrir proyecto", str(e))
+            return
+        self._pausar()
+        self._escribir_parametros(d["parametros"])
+        s = d["simulacion"]
+        self.vis = d["visibilidad"]
+        self.sim.set_visibilidad(self.vis)
+        self._dlg_vis = None
+        self.perfil_mov = d["perfil_movimiento"] if d["perfil_movimiento"] is not None \
+            else copy.deepcopy(self.perfil_mov_defecto)
+        for w, v in ((self.ui.checkBox_valpredeterminados, d["perfil_movimiento"] is None),
+                     (self.ui.comboBox_modo_pinon, s.get("modo_pinon", 0)),
+                     (self.ui.comboBox_modo_sim, s.get("modo", 0))):
+            w.blockSignals(True)
+            w.setChecked(v) if isinstance(w, QtWidgets.QCheckBox) else w.setCurrentIndex(int(v))
+            w.blockSignals(False)
+        self._recalcular()                      # antes que el control: en lineal fija el rango de X
+        self.control.reiniciar(float(s.get("valor_manual", s.get("angulo_manual", 0.0))))
+        self._aplicar_modo()
+        self._ruta = ruta
+        self.statusBar().showMessage(f"Proyecto abierto: {ruta}", 5000)
+
+    @manejador_seguro
+    def _exportar(self, *_):
+        if self.motor_actual is None:
+            return
+        ruta, _f = QtWidgets.QFileDialog.getSaveFileName(self, "Exportar a Excel", self.ARCHIVO_EXCEL, "Libro de Excel (*.xlsx)")
+        if not ruta:
+            return
+        QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.WaitCursor)
+        try:
+            exportar_excel(ruta, self.motor_actual, self.leer_parametros())
+        finally:
+            QtWidgets.QApplication.restoreOverrideCursor()
+        self.statusBar().showMessage(f"Excel exportado: {ruta}", 5000)
+
+    # ------------------------------------------------------------------ menú: otras ventanas
+    @manejador_seguro
+    def _resumen(self, *_):
+        if self.motor_actual is not None:
+            DialogoResumenDiseno(self.motor_actual, self.leer_parametros(), self).exec()
+
+    @manejador_seguro
+    def _abrir_aux(self, fabrica):
+        if self.perfil_actual is None:
+            self.statusBar().showMessage("Aún no hay un perfil válido para mostrar.", 4000)
+            return
+        w = fabrica()
+        self._aux.append(w)
+        w.destroyed.connect(lambda *_, w=w: self._aux.remove(w) if w in self._aux else None)
+        w.show()
+
+    @manejador_seguro
+    def _abrir_visibilidad(self, *_):
+        if self._dlg_vis is None:
+            self._dlg_vis = self.CLASE_DIALOGO_VISIBILIDAD(self.vis, self.sim.set_visibilidad, parent=self)
+        self._dlg_vis.actualizar_modo(self.ui.comboBox_modo_pinon.currentIndex() == 1)
+        self._dlg_vis.show(); self._dlg_vis.raise_(); self._dlg_vis.activateWindow()
+
+    # ------------------------------------------------------------------ navegación
+    @manejador_seguro
+    def volver_al_menu(self, *_):
+        self.close()
+
+    def closeEvent(self, e):
+        self._pausar()
+        for sig, slot in ((self.motor_ctrl.terminado, self._motor_terminado), (self.motor_ctrl.progreso, self._motor_progreso)):
+            try:
+                sig.disconnect(slot)
+            except (RuntimeError, TypeError):
+                pass
+        for w in list(self._aux):
+            w.close()
+        if self._retorno is not None and self._retorno.isHidden():
+            self._retorno.mostrar_de_nuevo()
+        super().closeEvent(e)

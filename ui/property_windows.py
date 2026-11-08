@@ -2,18 +2,19 @@
 """
 ui/property_windows.py
 
-Ventanas de propiedades que se abren desde el menú "Propiedades físicas" de EpitrocoidalV2.
-Son ventanas INDEPENDIENTES (no cierran ni ocultan la principal): se pueden abrir varias a la
-vez y todas se refrescan cuando cambian los parámetros (señal `perfilActualizado`).
+Ventanas de propiedades del menú "Propiedades físicas". Son INDEPENDIENTES (no cierran ni ocultan la
+principal) y se refrescan con la señal `perfilActualizado`.
 
-  - VentanaPerfilDiente  -> ToothProfile_Window.py : tabla de puntos + perfil en PyQtGraph.
-  - VentanaPropiedad     -> Graficas_Window.py     : una sola clase para Ángulo de presión,
-    Radio de curvatura y Camino de contacto (cambia `tipo`). Dos tablas (coordenadas de la
-    gráfica / rodillos activos) y un dial que mueve θ del piñón, igual que el slider del Excel:
-    marca sobre la gráfica el punto donde está cada rodillo en contacto.
+  - VentanaPerfilDiente  -> ToothProfile_Window.py : tabla de puntos + perfil.
+  - VentanaPropiedad     -> Graficas_Window.py     : Ángulo de presión / Radio de curvatura / Camino de
+    contacto, con tablas (coordenadas / rodillos activos) y un control de posición que marca sobre la
+    gráfica el punto de cada rodillo en contacto.
 
-NOTA: ToothProfile_Window.py y Graficas_Window.py definen ambos la clase `Ui_Graficas_Window`
-(mismo nombre generado por Qt Designer); aquí se importan con alias para no pisarse.
+El control de posición depende del sistema (`principal.LINEAL`): ANGULAR -> dial de θ; LINEAL
+(Trocoidal) -> el dial se sustituye en tiempo de ejecución por un slider de X (mm) con rango
+[0, longitud de la cremallera]. Los contactos los calcula `principal.contactos_para_propiedad()`.
+
+NOTA: ToothProfile_Window.py y Graficas_Window.py definen ambos `Ui_Graficas_Window`; se importan con alias.
 """
 from __future__ import annotations
 
@@ -21,10 +22,9 @@ import numpy as np
 import pyqtgraph as pg
 from PySide6 import QtCore, QtWidgets
 
-from engine.cinematica_engine import SolverCinematico
 from ui.errores import manejador_seguro
-from widgets.pg_helpers import (AngleControl, InspectorCurvas, configurar_menu_plot, desactivar_clic_leyenda,
-                                reemplazar_widget)
+from widgets.pg_helpers import (AngleControl, ControlLineal, InspectorCurvas, configurar_menu_plot,
+                                desactivar_clic_leyenda, reemplazar_widget)
 
 from Graficas_Window import Ui_Graficas_Window as Ui_Propiedad          # noqa: E402
 from ToothProfile_Window import Ui_Graficas_Window as Ui_PerfilDiente   # noqa: E402
@@ -92,7 +92,7 @@ class VentanaPerfilDiente(_VentanaAuxiliar):
         self.c_gen.setData(r.curva_x, r.curva_y)
         self.c_off.setData(r.offset_x, r.offset_y)
         if self._primera:
-            self.plot.autoRange(); self._primera = False
+            self.plot._menu.ver_todo(); self._primera = False
         _llenar_tabla(self.ui.table_coordinates, [r.theta, r.offset_x, r.offset_y],
                       ["θ (rad)", "X (mm)", "Y (mm)"])
 
@@ -117,10 +117,21 @@ class VentanaPropiedad(_VentanaAuxiliar):
         self.inspector = InspectorCurvas(self.plot, lambda: [self.c_prop])
         self._etiquetas: list[pg.TextItem] = []
         self._primera = True
-        self.control = AngleControl(self.ui.dial_posicion_theta, self.ui.doubleSpinBox_posicion_theta, self)
+        self.control = self._crear_control(principal)
         self.control.cambiado.connect(self._actualizar_rodillos)
         if principal.perfil_actual is not None:
             self._refrescar(principal.perfil_actual)
+
+    def _crear_control(self, principal):
+        u = self.ui
+        if not principal.LINEAL:
+            return AngleControl(u.dial_posicion_theta, u.doubleSpinBox_posicion_theta, self)
+        # Trocoidal: la perilla de θ no aplica (movimiento lineal) -> slider de X en mm
+        slider = reemplazar_widget(u.dial_posicion_theta, QtWidgets.QSlider(QtCore.Qt.Orientation.Horizontal))
+        u.label_5.setText("Posición lineal del Piñon X (mm)")
+        control = ControlLineal(slider, u.doubleSpinBox_posicion_theta, self)
+        control.set_rango(0.0, float(principal.leer_parametros().longitud_cremallera))
+        return control
 
     # -- datos de la gráfica ------------------------------------------------
     def _serie(self, r):
@@ -139,24 +150,23 @@ class VentanaPropiedad(_VentanaAuxiliar):
         x, y, cols, enc = self._serie(r)
         self.c_prop.setData(x, y)
         if self._primera:
-            self.plot.autoRange()
+            self.plot._menu.ver_todo()
             if self.tipo == "curvatura" and r.radio_curvatura_minimo:
-                m = r.radio_curvatura_minimo        # como V1: recortar picos para ver la zona útil
+                m = r.radio_curvatura_minimo        # recortar picos para ver la zona útil
                 self.plot.setYRange(min(0.0, 0.9 * m), max(6.0 * m, m + 1.0))
             self._primera = False
         _llenar_tabla(self.ui.table_coordinates, cols, enc)
+        if self.principal.LINEAL:    # el rango de X depende de la longitud de la cremallera
+            self.control.set_rango(0.0, float(self.principal.leer_parametros().longitud_cremallera))
         self._actualizar_rodillos(self.control.acumulado)
 
     # -- rodillos activos ---------------------------------------------------
     @manejador_seguro
-    def _actualizar_rodillos(self, angulo_grados: float):
+    def _actualizar_rodillos(self, valor: float):
         motor = self.principal.motor_actual
         if motor is None:
             return
-        solver = SolverCinematico(motor.contexto)
-        estado = solver.resolver("angular", True, False, angulo_grados, 0.0)   # piñón fijo, θ manual
-        contactos = motor.rodillos_en_contacto(estado.angulo_relativo_generatriz_rad,
-                                               modo_pinon_alterno=False, estado_cinematico=estado)
+        contactos = self.principal.contactos_para_propiedad(valor)   # piñón fijo, control manual
         puntos = []
         for c in contactos:
             th = c["theta_local"]

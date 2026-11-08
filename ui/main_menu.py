@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-ui/main_menu.py — Seleccion_de_sistema.ui (sin cambios de comportamiento respecto a V1).
-Cada botón abre la ventana de su sistema y OCULTA (no destruye) el menú. En V2 solo
-Epitrocoidal está migrado; los demás avisan sin tumbar nada.
+ui/main_menu.py — Seleccion_de_sistema.ui. Cada botón abre la ventana de su sistema y OCULTA (no destruye)
+el menú. Migrados a V2: Epitrocoidal, Hipotrocoidal y Trocoidal (botón "cremallera" del menú);
+Planetario avisa sin tumbar nada. Las ventanas se importan al abrirse (un fallo no tumba el menú).
 """
 from PySide6 import QtWidgets
 
@@ -14,9 +14,14 @@ from Seleccion_de_sistema import Ui_MainWindow   # noqa: E402
 
 def _crear_ventana(tipo: TipoSistema, retorno):
     if tipo is TipoSistema.EPITROCOIDAL:
-        from ui.epitrocoidal_window import VentanaEpitrocoidalV2
-        return VentanaEpitrocoidalV2(retorno=retorno)
-    return None
+        from ui.epi_hipo_window import VentanaEpitrocoidal as clase
+    elif tipo is TipoSistema.HIPOTROCOIDAL:
+        from ui.epi_hipo_window import VentanaHipotrocoidal as clase
+    elif tipo is TipoSistema.CREMALLERA:                 # en V2 se llama Trocoidal
+        from ui.trocoidal_window import VentanaTrocoidal as clase
+    else:
+        return None
+    return clase(retorno=retorno)
 
 
 class MenuPrincipal(QtWidgets.QMainWindow):

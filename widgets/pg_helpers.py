@@ -2,13 +2,12 @@
 """
 widgets/pg_helpers.py
 
-Utilidades compartidas por las ventanas de V2 (antes cada ventana repetía esta lógica):
+Utilidades compartidas por las ventanas de V2:
   - configurar_pyqtgraph(): opciones globales ANTES de crear cualquier widget de pg.
-  - reemplazar_widget(): sustituye un placeholder de Qt Designer (QGraphicsView / QWidget
-    vacío) por otro widget, en la misma celda de su layout.
-  - AngleControl: dial + spinbox con encoder incremental (ángulo acumulado, vueltas
-    incluidas). Mismo comportamiento que system_window.py de V1, extraído en una clase
-    para usarlo en EpitrocoidalV2 y en Graficas_Window.
+  - configurar_menu_plot(): menú contextual propio en español (ver widgets/plot_menu.py).
+  - reemplazar_widget() / embeber_en_contenedor(): sustituir placeholders de Qt Designer.
+  - AngleControl (dial + spinbox, ángulo acumulado) y ControlLineal (slider + spinbox, X en mm).
+  - InspectorCurvas: cursor de inspección.
 """
 from __future__ import annotations
 
@@ -17,6 +16,8 @@ import weakref
 import numpy as np
 import pyqtgraph as pg
 from PySide6 import QtCore, QtGui, QtWidgets
+
+from widgets.plot_menu import MenuGrafica
 
 COLORES_TEMA = {True: {"bg": (28, 28, 33), "fg": (210, 210, 210)},
                 False: {"bg": (255, 255, 255), "fg": (30, 30, 30)}}
@@ -29,25 +30,11 @@ def configurar_pyqtgraph(usar_opengl: bool = False, oscuro: bool = True) -> None
                         background=c["bg"], foreground=c["fg"])
 
 
-def configurar_menu_plot(plot: pg.PlotWidget, titulo: str, geometrica: bool = False) -> pg.PlotWidget:
-    """Menú contextual (clic derecho) de PyQtGraph: View All, X Axis, Y Axis, Mouse Mode y
-    Plot Options -- TODAS menos 'Transforms'. En gráficas geométricas (perfil, camino de
-    contacto, simulación) también se ocultan Downsample/Average, que no tienen sentido sobre
-    una curva X-Y cerrada. Reemplaza 'Export...' de pyqtgraph por el exportador propio de
-    imágenes (exporters/image_exporter.py) y registra el plot para tema / OpenGL en caliente."""
-    from exporters.image_exporter import exportar_con_dialogo
-    pi = plot.getPlotItem()
-    pi.setMenuEnabled(True)
-    pi.setContextMenuActionVisible("Transforms", False)
-    if geometrica:
-        pi.setContextMenuActionVisible("Downsample", False)
-        pi.setContextMenuActionVisible("Average", False)
-    plot.scene().contextMenu = []                       # quita 'Export...' genérico
-    vb = pi.vb
-    vb.menu.addSeparator()
-    accion = vb.menu.addAction("Exportar imagen…")
-    accion.triggered.connect(lambda *_: exportar_con_dialogo(plot, plot.window(), titulo))
-    plot._accion_exportar = accion
+def configurar_menu_plot(plot: pg.PlotWidget, titulo: str, geometrica: bool = False,
+                         transformadas: bool = False) -> pg.PlotWidget:
+    """Instala el menú contextual en español (`plot._menu`). `transformadas=True` añade el submenú
+    Transformadas (solo la línea de tiempo). `geometrica` se conserva por compatibilidad."""
+    plot._menu = MenuGrafica(plot, titulo, transformadas)
     _PLOTS.add(plot)
     return plot
 
@@ -106,9 +93,8 @@ def aplicar_opengl(activo: bool, parent=None) -> bool:
 
 
 class InspectorCurvas(QtCore.QObject):
-    """Cursor de inspección (como en Test_GráficaPyQTGraph.py): cruz de líneas punteadas que
-    sigue al ratón; si hay un punto de alguna curva visible a <= `umbral_px` píxeles, la cruz
-    se ancla a él y muestra nombre de la curva y coordenadas (X, Y) reales del dato."""
+    """Cursor de inspección: cruz de líneas punteadas que sigue al ratón; si hay un punto de alguna
+    curva visible a <= `umbral_px` píxeles, la cruz se ancla a él y muestra nombre y coordenadas."""
 
     def __init__(self, plot: pg.PlotWidget, curvas_fn, umbral_px: float = 14.0):
         super().__init__(plot)
@@ -120,6 +106,7 @@ class InspectorCurvas(QtCore.QObject):
         self.punto = pg.ScatterPlotItem(size=9, pen=None, brush=pg.mkBrush(230, 64, 64))
         self.texto = pg.TextItem(anchor=(0, 1), color=(255, 255, 255), fill=pg.mkBrush(0, 0, 0, 190))
         for it in (self.v, self.h, self.punto, self.texto):
+            it._sin_encuadre = True              # "Ver todo" no debe medirlos
             plot.addItem(it, ignoreBounds=True)
             it.setZValue(1000)
         self._ocultar()
@@ -199,10 +186,8 @@ def embeber_en_contenedor(contenedor: QtWidgets.QWidget, nuevo: QtWidgets.QWidge
 class AngleControl(QtCore.QObject):
     """Dial (rango [90, 450] con wrapping, 0° visual arriba) + spinbox [0, 360].
 
-    `acumulado` = vueltas*360 + ángulo del dial (encoder incremental). Emite `cambiado`
-    solo cuando el USUARIO mueve dial/spin; `mostrar()` actualiza los widgets sin emitir
-    (la usa el modo automático para que el dial siga a la simulación).
-    """
+    `acumulado` = vueltas*360 + ángulo del dial (encoder incremental). Emite `cambiado` solo cuando
+    el USUARIO mueve dial/spin; `mostrar()` actualiza los widgets sin emitir."""
     cambiado = QtCore.Signal(float)
 
     def __init__(self, dial, spin, parent=None):
@@ -234,7 +219,6 @@ class AngleControl(QtCore.QObject):
         self.cambiado.emit(self.acumulado)
 
     def mostrar(self, angulo_grados: float) -> None:
-        """Refleja un ángulo externo en dial y spin sin emitir ni alterar el acumulado manual."""
         local = angulo_grados % 360.0
         for w, v in ((self.spin, local), (self.dial, 90 + int(local) % 360)):
             w.blockSignals(True); w.setValue(v); w.blockSignals(False)
@@ -243,3 +227,47 @@ class AngleControl(QtCore.QObject):
         self.acumulado = float(angulo_grados)
         self._previo = angulo_grados % 360.0
         self.mostrar(angulo_grados)
+
+
+class ControlLineal(QtCore.QObject):
+    """Slider + spinbox para la posición X (mm) del piñón en Trocoidal. Misma interfaz que
+    AngleControl: `acumulado` (= X), `cambiado`, `mostrar()` y `reiniciar()`."""
+    cambiado = QtCore.Signal(float)
+    FACTOR = 100          # el slider es entero: pasos de 0.01 mm
+
+    def __init__(self, slider, spin, parent=None):
+        super().__init__(parent)
+        self.slider, self.spin = slider, spin
+        self.acumulado = float(spin.value())
+        slider.valueChanged.connect(self._desde_slider)
+        spin.valueChanged.connect(self._desde_spin)
+
+    def set_rango(self, minimo: float, maximo: float) -> None:
+        for w in (self.slider, self.spin):
+            w.blockSignals(True)
+        self.spin.setRange(minimo, maximo)
+        self.slider.setRange(int(round(minimo * self.FACTOR)), int(round(maximo * self.FACTOR)))
+        for w in (self.slider, self.spin):
+            w.blockSignals(False)
+        self.acumulado = min(max(self.acumulado, minimo), maximo)
+        self.mostrar(self.acumulado)
+
+    def _desde_slider(self, v: int) -> None:
+        x = v / self.FACTOR
+        self.spin.blockSignals(True); self.spin.setValue(x); self.spin.blockSignals(False)
+        self.acumulado = x
+        self.cambiado.emit(x)
+
+    def _desde_spin(self, x: float) -> None:
+        self.slider.blockSignals(True); self.slider.setValue(int(round(x * self.FACTOR))); self.slider.blockSignals(False)
+        self.acumulado = float(x)
+        self.cambiado.emit(self.acumulado)
+
+    def mostrar(self, x_mm: float) -> None:
+        self.spin.blockSignals(True); self.spin.setValue(x_mm); self.spin.blockSignals(False)
+        self.slider.blockSignals(True); self.slider.setValue(int(round(self.spin.value() * self.FACTOR)))
+        self.slider.blockSignals(False)
+
+    def reiniciar(self, x_mm: float = 0.0) -> None:
+        self.mostrar(x_mm)
+        self.acumulado = float(self.spin.value())

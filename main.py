@@ -11,8 +11,9 @@ if RAIZ not in sys.path:
     sys.path.insert(0, RAIZ)
 
 # Módulos generados por Qt Designer (pyside6-uic). Se buscan en TODA la carpeta del proyecto.
-MODULOS_UI = ["Seleccion_de_sistema", "EpitrocoidalV2", "ToothProfile_Window", "Graficas_Window",
-              "Perfildevelocidad_simulador_Window", "Mostrar_Ocultar_Epitrocoide"]
+MODULOS_UI = ["Seleccion_de_sistema", "Epi_HipotrocoidalV2", "TrocoidalV2", "ToothProfile_Window",
+              "Graficas_Window", "Perfildevelocidad_simulador_Window", "Mostrar_Ocultar_Epitrocoidal",
+              "Mostrar_Ocultar_Hipotrocoidal", "Mostrar_Ocultar_Trocoidal"]
 
 from PySide6 import QtWidgets   # noqa: E402
 
@@ -42,7 +43,6 @@ def main() -> int:
     app = QtWidgets.QApplication(sys.argv)
     sys.excepthook = lambda t, v, tb: _mostrar_error(
         "Error inesperado", "".join(traceback.format_exception(t, v, tb)))
-#xd
     faltan = localizar_modulos_ui()
     if faltan:
         _mostrar_error(
