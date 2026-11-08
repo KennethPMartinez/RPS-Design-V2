@@ -70,6 +70,12 @@ Engine: `motion_engine`, `motor_plan`, `contact_engine` (θ=0 exacto), `rollerpi
 
 ---
 
+## 6.2. Respuesta a pendientes
+
+- Se realizo la prueba visual de la operación del aplicativo y funciona adecuadamente, sin embargo el muestreo de los contactos para la ventana hipotrocoidal es de poca resolución en la raiz del diente y produce "saltos".
+
+---
+
 ## 7. Supuestos tomados (sin respuesta explícita)
 
 Q2 diálogos: versión `actualizar_modo`/`HABILITACION_POR_MODO` apuntando a los nuevos `Mostrar_Ocultar_*`. Q3: se conservan los nombres internos de Cremallera. Q8: en Trocoidal el perfil sigue siendo el ángulo del piñón y X = prrp·θ (el motor real usa ese ángulo). Q9: rango de X = [0, longitud de la cremallera]. Q10: en la ventana de propiedades de Trocoidal el dial se sustituye por un slider de X.
