@@ -23,7 +23,7 @@ import pyqtgraph as pg
 from PySide6 import QtCore, QtWidgets
 
 from engine.motion_engine import (LEYES, MAX_COEFICIENTES, UNIDADES, FabricaPresets, LineaTiempo,
-                                  PerfilMovimiento, RegistroLeyes, Tramo)
+                                  PerfilMovimiento, RegistroLeyes, Tramo, escalar_perfil)
 from ui.errores import manejador_seguro
 from widgets.plot_menu import etiqueta_eje_x, transformar
 from widgets.pg_helpers import (InspectorCurvas, configurar_menu_plot, desactivar_clic_leyenda, embeber_en_contenedor,
@@ -43,8 +43,10 @@ def _rango(sp, lo, hi, dec, paso=0.1):
 class VentanaPerfilVelocidad(QtWidgets.QMainWindow):
     perfilAceptado = QtCore.Signal(object)
 
-    def __init__(self, perfil: PerfilMovimiento, parent=None):
+    def __init__(self, perfil: PerfilMovimiento, parent=None, rango=None):
         super().__init__(parent)
+        self._rango = rango            # (mín, máx) ° del recorrido permitido (Trocoidal) o None
+        self._msg_preset = ""
         self.setAttribute(QtCore.Qt.WidgetAttribute.WA_DeleteOnClose)
         self.ui = Ui_GiroImpuesto_window()
         self.ui.setupUi(self)
@@ -397,11 +399,65 @@ class VentanaPerfilVelocidad(QtWidgets.QMainWindow):
     @manejador_seguro
     def _aplicar_preset(self, *_):
         self._pausar()
-        self.perfil = FabricaPresets.crear(self.ui.comboBox_preset.currentText())
+        self.perfil = self._encajar_preset(FabricaPresets.crear(self.ui.comboBox_preset.currentText()))
         self._sincronizar_todo(0)
         self._marcar_curva_de_entrada()
         self._t = 0.0
         self._recalcular()
+        if self._msg_preset:
+            self.statusBar().showMessage(self._msg_preset, 6000)
+            self._msg_preset = ""
+        if self._msg_preset:
+            self.statusBar().showMessage(self._msg_preset, 6000)
+            self._msg_preset = ""
+        if self._msg_preset:
+            self.statusBar().showMessage(self._msg_preset, 6000)
+            self._msg_preset = ""
+
+    def _encajar_preset(self, perfil):
+        """Con un rango de recorrido el preset se escala para que el piñón no se salga."""
+        if self._rango is None:
+            return perfil
+        lo, hi = self._rango
+        try:
+            pmin, pmax = LineaTiempo.construir(perfil, RegistroLeyes(), 1600).rango_posicion()
+        except Exception:
+            return perfil
+        if pmax - pmin <= hi - lo + 1e-9:
+            return perfil
+        f = 0.999 * (hi - lo) / (pmax - pmin)
+        self._msg_preset = f"Preset escalado ×{f:.3f} para caber en el recorrido del piñón ({hi - lo:.1f}°)."
+        return escalar_perfil(perfil, f)
+
+    def _encajar_preset(self, perfil):
+        """Con un rango de recorrido el preset se escala para que el piñón no se salga."""
+        if self._rango is None:
+            return perfil
+        lo, hi = self._rango
+        try:
+            pmin, pmax = LineaTiempo.construir(perfil, RegistroLeyes(), 1600).rango_posicion()
+        except Exception:
+            return perfil
+        if pmax - pmin <= hi - lo + 1e-9:
+            return perfil
+        f = 0.999 * (hi - lo) / (pmax - pmin)
+        self._msg_preset = f"Preset escalado ×{f:.3f} para caber en el recorrido del piñón ({hi - lo:.1f}°)."
+        return escalar_perfil(perfil, f)
+
+    def _encajar_preset(self, perfil):
+        """Con un rango de recorrido el preset se escala para que el piñón no se salga."""
+        if self._rango is None:
+            return perfil
+        lo, hi = self._rango
+        try:
+            pmin, pmax = LineaTiempo.construir(perfil, RegistroLeyes(), 1600).rango_posicion()
+        except Exception:
+            return perfil
+        if pmax - pmin <= hi - lo + 1e-9:
+            return perfil
+        f = 0.999 * (hi - lo) / (pmax - pmin)
+        self._msg_preset = f"Preset escalado ×{f:.3f} para caber en el recorrido del piñón ({hi - lo:.1f}°)."
+        return escalar_perfil(perfil, f)
 
     def _marcar_curva_de_entrada(self):
         for nombre, c in self.checks.items():
@@ -418,6 +474,10 @@ class VentanaPerfilVelocidad(QtWidgets.QMainWindow):
             self.statusBar().showMessage("Aviso: " + " | ".join(self.lt.errores[-3:]), 6000)
         else:
             self.statusBar().clearMessage()
+            if self._rango is not None:
+                pmin, pmax = self.lt.rango_posicion()
+                if pmax - pmin > self._rango[1] - self._rango[0] + 1e-9:
+                    self.statusBar().showMessage("El perfil excede el recorrido del piñón: la simulación lo recortará.", 8000)
         sp = self.ui.doubleSpinBox_5
         sp.blockSignals(True); sp.setRange(self.lt.t_ini, self.lt.t_fin); sp.blockSignals(False)
         self._t = min(max(self._t, self.lt.t_ini), self.lt.t_fin)

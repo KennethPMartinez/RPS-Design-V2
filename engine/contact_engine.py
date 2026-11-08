@@ -301,20 +301,20 @@ class ContactEngine:
                     mejor_j = j
                     mejor_arr, mejor_i = dist2, i_min
 
-            # V2 (θ=0): refinamiento parabólico del mínimo de distancia² y evaluación EXACTA
-            # de la curva en θ*. Antes, con n_muestras=60 (par) θ=0 nunca estaba en la malla
-            # y el rodillo en la raíz reportaba θ_local≈±0.011 y un punto desplazado de la raíz.
-            if 0 < mejor_i < len(theta_muestras) - 1:
-                d0, d1, d2_ = mejor_arr[mejor_i - 1], mejor_arr[mejor_i], mejor_arr[mejor_i + 1]
-                den = d0 - 2.0 * d1 + d2_
-                if den > 1e-18:
-                    h = theta_muestras[1] - theta_muestras[0]
-                    t_ref = theta_muestras[mejor_i] - 0.5 * h * (d2_ - d0) / den
-                    t_ref = float(min(max(t_ref, theta_muestras[mejor_i - 1]), theta_muestras[mejor_i + 1]))
-                    ox_r, oy_r = self.motor.curva_offset(t_ref)
-                    ox_r, oy_r = mu.rotar(float(ox_r), float(oy_r), rot_vista)
-                    ox_r, oy_r = mu.rotar(ox_r, oy_r, mejor_j * paso_diente)
-                    mejor_px, mejor_py, mejor_theta = float(ox_r), float(oy_r), t_ref
+            # V2.1: refinamiento por ZOOM sobre la curva EXACTA. Sustituye al parabólico sobre d², que con la
+            # malla de 61 muestras dejaba saltos de theta_local en la raíz (más visibles en Hipotrocoidal).
+            # Cada pasada evalúa 21 puntos en ±1 paso y estrecha la ventana ÷10 (5 pasadas ~ 1e-8 rad).
+            paso_malla = float(theta_muestras[1] - theta_muestras[0])
+            lo = max(float(mejor_theta) - paso_malla, float(theta_muestras[0]))
+            hi = min(float(mejor_theta) + paso_malla, float(theta_muestras[-1]))
+            for _ in range(5):
+                ts = np.linspace(lo, hi, 21)
+                oxz, oyz = self.motor.curva_offset(ts)
+                oxz, oyz = mu.rotar(oxz, oyz, rot_vista)
+                oxz, oyz = mu.rotar(oxz, oyz, mejor_j * paso_diente)
+                kz = int(np.argmin((oxz - cx_cand[pos]) ** 2 + (oyz - cy_cand[pos]) ** 2))
+                mejor_px, mejor_py, mejor_theta = float(oxz[kz]), float(oyz[kz]), float(ts[kz])
+                lo, hi = float(ts[max(kz - 1, 0)]), float(ts[min(kz + 1, 20)])
 
             ox_contacto[pos], oy_contacto[pos] = mejor_px, mejor_py
             theta_local[pos] = mejor_theta

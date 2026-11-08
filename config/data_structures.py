@@ -22,10 +22,14 @@ class TipoSistema(Enum):
     PLANETARIO = auto()
 
 
-class ComponenteBloqueado(Enum):
+class Componente(str, Enum):
+    """Componente del planetario (str: se serializa a JSON como "Sol"/"Brazo"/"Anular")."""
     ANULAR = "Anular"
     BRAZO = "Brazo"
     SOL = "Sol"
+
+
+ComponenteBloqueado = Componente   # nombre anterior
 
 
 @dataclass
@@ -78,13 +82,19 @@ class ParametrosEpitrocoidal(ParametrosRodillos):
 @dataclass
 class ParametrosPlanetario(ParametrosRodillos):
     numero_dientes_sol: int = 12
-    componente_bloqueado: ComponenteBloqueado = ComponenteBloqueado.ANULAR
+    componente_entrada: Componente = Componente.SOL
+    componente_bloqueado: Componente = Componente.ANULAR
     # No es un valor libre: lo resuelve el motor (ver Cálculo_de_numero_de_
     # planetas). Se deja pendiente a propósito hasta implementar esa regla.
     numero_planetas: Optional[int] = None
 
+    def __post_init__(self):
+        self.componente_entrada = Componente(self.componente_entrada)
+        self.componente_bloqueado = Componente(self.componente_bloqueado)
+
     def es_valido(self) -> bool:
-        return super().es_valido() and self.numero_dientes_sol >= 3
+        return (super().es_valido() and self.numero_dientes_sol >= 3
+                and self.componente_entrada != self.componente_bloqueado)
 
 
 @dataclass

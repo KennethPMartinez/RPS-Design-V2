@@ -13,7 +13,8 @@ if RAIZ not in sys.path:
 # Módulos generados por Qt Designer (pyside6-uic). Se buscan en TODA la carpeta del proyecto.
 MODULOS_UI = ["Seleccion_de_sistema", "Epi_HipotrocoidalV2", "TrocoidalV2", "ToothProfile_Window",
               "Graficas_Window", "Perfildevelocidad_simulador_Window", "Mostrar_Ocultar_Epitrocoidal",
-              "Mostrar_Ocultar_Hipotrocoidal", "Mostrar_Ocultar_Trocoidal"]
+              "Mostrar_Ocultar_Hipotrocoidal", "Mostrar_Ocultar_Trocoidal",
+              "PlanetarioV2", "Graficas_Window_PlanetarioV2", "ToothProfile_Window_PlanetarioV2"]
 
 from PySide6 import QtWidgets   # noqa: E402
 

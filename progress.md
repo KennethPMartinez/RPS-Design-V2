@@ -13,7 +13,7 @@ App de escritorio Python/PySide6 para diseño y simulación de sistemas de piñ�
 | Epitrocoidal | Migrado y funcional |
 | Hipotrocoidal | Migrado (comparte ventana con Epitrocoidal) — pendiente de prueba visual |
 | Trocoidal (antes Cremallera) | Migrado (sistema lineal) — pendiente de prueba visual |
-| Planetario | Pendiente (el menú avisa "aún no migrado") |
+| Planetario | Migrado (sol epi + anular hipo + N planetas) — pendiente de prueba visual |
 | Render (PyQtGraph) | Hecho, con OpenGL opcional en caliente |
 | Menú contextual de gráficas | Propio, en español; "Ver todo" encuadra el contenido |
 | Transformadas (FFT, derivada, integral) | Solo en la línea de tiempo (visuales) |
@@ -100,3 +100,19 @@ Q2 diálogos: versión `actualizar_modo`/`HABILITACION_POR_MODO` apuntando a los
 |---|---|
 | 2026-10-25 | Primera versión: estado de V2 hasta la reconstrucción de los archivos de Designer. |
 | 2026-11-01 | Lote 1: menú en español, Ver todo, transformadas, migración de Hipotrocoidal y Trocoidal (§8). |
+| 2026-11-08 | Lote 2: Planetario + correcciones de 6.2 (contactos hipo, Trocoidal automático dentro de L) (§10). |
+| 2026-11-08 | Lote 2: Planetario + correcciones de 6.2 (contactos hipo, Trocoidal automático dentro de L) (§10). |
+| 2026-11-08 | Lote 2: Planetario + correcciones de 6.2 (contactos hipo, Trocoidal automático dentro de L) (§10). |
+
+---
+
+## 10. Cambios 08-nov-2026 (V2 · lote 2)
+
+- **§10.1 Planetario migrado** (`engine/planetario_engine.py`, `ui/planetary_window.py`, `widgets/planetary_view.py`, `ui/planetary_property_windows.py`). Sol = `EpitrocoidalEngine`, anular = `HipotrocoidalEngine` con `Za = Zs + 2·Zrp` (mismo prrp, mismo cd). Cinemática por Willis (`Zs·φs + Za·φa = (Zs+Za)·φc`): entrada = 1, bloqueado = 0, el tercero se resuelve (combos válidos: Sol/Anular, Sol/Brazo, Brazo/Anular, Anular/Brazo; si entrada = bloqueado se corrige el bloqueado). El ángulo del motor es el del componente de entrada.
+- **§10.2 Contactos del planetario**: cada par (engranaje, planeta) usa el modo "Orbitar" de los engines con el movimiento RELATIVO al engranaje (α = γ − φ_g, giro = ±cd/prrp·α) y el resultado se rota φ_g al mundo. La orientación del planeta se fija con el sol; para el anular, K_i = (Zs+Za)·β_i/Zrp − C/Zrp + π con C = π·(Zrp mod 2) es múltiplo del paso del rodillo si N | (Zs+Za) (solo cambia la etiqueta del rodillo, m_i).
+- **§10.3 Número de planetas** (Cálculo_de_numero_de_planetas.pdf): N | (Zs+Za) y D_ap < 2·cd·sin(π/N), con D_ap = 2(mrrp + r_rodillo + t_c + t_w), t_c = 1 mm, t_w = 2 mm. Caso base (12/12/Ø3/8.5/17°): N ∈ {2, 3, 4}; el combo elige el mayor.
+- **§10.4 (resp. 6.2) Contactos Hipotrocoidal**: `contact_engine._localizar_contacto` sustituye el refinamiento parabólico sobre d² por un ZOOM sobre la curva exacta (5 pasadas de 21 puntos, ventana ÷10). Test: `theta_local` vs búsqueda densa (< 3e-4 rad).
+- **§10.5 (resp. 6.2) Trocoidal automático**: `LineaTiempo.ajustada(lo, hi, escalar)` encaja el perfil en θ ∈ [0, L/prrp]: preset por defecto → se escala (pos/vel/acc son lineales); si aún sobresale se desplaza; perfil editado → solo se desplaza o se recorta (no se escala sin avisar). El editor de línea de tiempo escala los presets que aplica (`escalar_perfil`) y avisa si el perfil excede el recorrido. Se reencaja al cambiar L o cualquier parámetro. También protege al motor real (el plan sale de la misma línea de tiempo).
+- **§10.6 Archivos**: `ParametrosPlanetario` gana `componente_entrada`; `Componente(str, Enum)` (serializa a JSON); `file_handler` acepta `PLANETARIO`. `sistema_base.py` gana ganchos (`_crear_vista`, `_alterno`, `_rango_angulo_auto`, `_conectar_modo_pinon`, `_conectar_propiedades`, `_combos_modo`).
+- **Pendiente de verificar a mano**: prueba visual del Planetario (4 combinaciones, N = 2/3/4, contactos sol y anular, etiquetas); que el salto de la raíz hipotrocoidal haya desaparecido; Trocoidal automático con L distintos. Opcional: generar `Mostrar_Ocultar_Planetario.py` con `pyside6-uic` (mientras no exista se usa un diálogo equivalente por código).
+- **Tests nuevos**: `test_planetario.py` (Willis, N válidos, contactos con sol/anular, rodillo activo = posición en el mundo), `test_contacto_y_rango.py` (refinamiento, `ajustada`, `escalar_perfil`).

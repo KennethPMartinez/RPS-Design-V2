@@ -80,7 +80,7 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
         self.ui = self.CLASE_UI()
         self.ui.setupUi(self)
         self._preparar_ui()
-        self.sim = reemplazar_widget(self.ui.graphicsView_epi, SimulationView())
+        self.sim = self._crear_vista()
         self.control = self._crear_control()
 
         self._debounce = QtCore.QTimer(self, singleShot=True, interval=150)
@@ -125,6 +125,78 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
     def _actualizar_rango_control(self, parametros):
         pass
 
+    def _crear_vista(self):
+        return reemplazar_widget(self.ui.graphicsView_epi, SimulationView())
+
+    def _alterno(self) -> bool:
+        """True si el piñón está en modo alterno (Orbitar / Trasladar)."""
+        return self.ui.comboBox_modo_pinon.currentIndex() == 1
+
+    def _rango_angulo_auto(self):
+        """(mín, máx) en ° que puede recorrer la línea de tiempo, o None si no hay límite
+        (Trocoidal: el piñón no debe salirse de la cremallera)."""
+        return None
+
+    def _conectar_modo_pinon(self):
+        self.ui.comboBox_modo_pinon.currentIndexChanged.connect(lambda *_: self._modo_pinon_cambiado())
+
+    def _conectar_propiedades(self):
+        u = self.ui
+        u.actionPerfil_del_diente.triggered.connect(lambda *_: self._abrir_aux(lambda: VentanaPerfilDiente(self)))
+        u.action_ngulo_de_Presi_n.triggered.connect(lambda *_: self._abrir_aux(lambda: VentanaPropiedad(self, "angulo")))
+        u.actionRadio_de_Curvatura.triggered.connect(lambda *_: self._abrir_aux(lambda: VentanaPropiedad(self, "curvatura")))
+        u.actionCamino_de_Contacto.triggered.connect(lambda *_: self._abrir_aux(lambda: VentanaPropiedad(self, "contacto")))
+
+    def _combos_modo(self, s: dict) -> tuple:
+        """(combo, valor guardado) que se restauran al abrir un proyecto."""
+        return ((self.ui.comboBox_modo_pinon, s.get("modo_pinon", 0)),)
+
+    def _crear_vista(self):
+        return reemplazar_widget(self.ui.graphicsView_epi, SimulationView())
+
+    def _alterno(self) -> bool:
+        """True si el piñón está en modo alterno (Orbitar / Trasladar)."""
+        return self.ui.comboBox_modo_pinon.currentIndex() == 1
+
+    def _rango_angulo_auto(self):
+        """(mín, máx) en ° que puede recorrer la línea de tiempo, o None si no hay límite
+        (Trocoidal: el piñón no debe salirse de la cremallera)."""
+        return None
+
+    def _conectar_modo_pinon(self):
+        self.ui.comboBox_modo_pinon.currentIndexChanged.connect(lambda *_: self._modo_pinon_cambiado())
+
+    def _conectar_propiedades(self):
+        u = self.ui
+        self._conectar_propiedades()
+
+    def _combos_modo(self, s: dict) -> tuple:
+        """(combo, valor guardado) que se restauran al abrir un proyecto."""
+        return ((self.ui.comboBox_modo_pinon, s.get("modo_pinon", 0)),)
+
+    def _crear_vista(self):
+        return reemplazar_widget(self.ui.graphicsView_epi, SimulationView())
+
+    def _alterno(self) -> bool:
+        """True si el piñón está en modo alterno (Orbitar / Trasladar)."""
+        return self.ui.comboBox_modo_pinon.currentIndex() == 1
+
+    def _rango_angulo_auto(self):
+        """(mín, máx) en ° que puede recorrer la línea de tiempo, o None si no hay límite
+        (Trocoidal: el piñón no debe salirse de la cremallera)."""
+        return None
+
+    def _conectar_modo_pinon(self):
+        self.ui.comboBox_modo_pinon.currentIndexChanged.connect(lambda *_: self._modo_pinon_cambiado())
+
+    def _conectar_propiedades(self):
+        u = self.ui
+        self._conectar_propiedades()
+
+    def _combos_modo(self, s: dict) -> tuple:
+        """(combo, valor guardado) que se restauran al abrir un proyecto."""
+        return ((self.ui.comboBox_modo_pinon, s.get("modo_pinon", 0)),)
+
     # ------------------------------------------------------------------ conexiones
     def _spins(self) -> tuple:
         return tuple(getattr(self.ui, nombre) for _, nombre in self.MAPEO_PARAMETROS)
@@ -134,7 +206,7 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
         for sp in self._spins():
             sp.valueChanged.connect(lambda *_: self._debounce.start())
         self.control.cambiado.connect(lambda *_: self._emitir_estado())
-        u.comboBox_modo_pinon.currentIndexChanged.connect(lambda *_: self._modo_pinon_cambiado())
+        self._conectar_modo_pinon()
         u.comboBox_modo_sim.currentIndexChanged.connect(lambda *_: self._aplicar_modo())
         u.pushButton_mostrar_ocultar.clicked.connect(lambda *_: self._abrir_visibilidad())
         u.pushButton_sim_reset.clicked.connect(lambda *_: self._reset())
@@ -152,10 +224,7 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
         u.actionGu_a_T_cnica.triggered.connect(lambda *_: QtWidgets.QMessageBox.information(
             self, "Guía técnica", "La guía técnica se desarrollará más adelante."))
         u.actionResumen_de_Dise_o.triggered.connect(lambda *_: self._resumen())
-        u.actionPerfil_del_diente.triggered.connect(lambda *_: self._abrir_aux(lambda: VentanaPerfilDiente(self)))
-        u.action_ngulo_de_Presi_n.triggered.connect(lambda *_: self._abrir_aux(lambda: VentanaPropiedad(self, "angulo")))
-        u.actionRadio_de_Curvatura.triggered.connect(lambda *_: self._abrir_aux(lambda: VentanaPropiedad(self, "curvatura")))
-        u.actionCamino_de_Contacto.triggered.connect(lambda *_: self._abrir_aux(lambda: VentanaPropiedad(self, "contacto")))
+        self._conectar_propiedades()
 
     # ------------------------------------------------------------------ parámetros y motor
     def leer_parametros(self):
@@ -182,6 +251,8 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
         self.sim.set_curva_base(*self._curva_base(motor))
         self.perfilActualizado.emit(res)
         self._emitir_estado()
+        if self._es_auto() and self._rango_angulo_auto() is not None:    # L / prrp cambiaron: reencajar
+            self._reconstruir_auto()
 
     # ------------------------------------------------------------------ estado de la simulación
     def _modo_pinon_cambiado(self):
@@ -239,9 +310,21 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
 
     def _construir_linea_tiempo(self):
         try:
-            self.linea_tiempo = LineaTiempo.construir(self.perfil_mov, RegistroLeyes())
-            if self.linea_tiempo.errores:
-                self.statusBar().showMessage("Aviso: " + " | ".join(self.linea_tiempo.errores[-3:]), 6000)
+            lt = LineaTiempo.construir(self.perfil_mov, RegistroLeyes())
+            avisos = list(lt.errores[-3:])
+            rango = self._rango_angulo_auto()
+            if rango is not None:       # el recorrido debe caber (Trocoidal: X = prrp·θ en [0, L])
+                lt, f, off, recortada = lt.ajustada(*rango, escalar=self.ui.checkBox_valpredeterminados.isChecked())
+                if f < 1.0:
+                    avisos.append(f"preset escalado ×{f:.3f} para que el piñón no salga del mecanismo")
+                if off:
+                    avisos.append(f"recorrido desplazado {off:+.1f}° para quedar dentro del rango")
+                if recortada:
+                    avisos.append("el perfil excede el recorrido permitido: se recortó")
+            self.linea_tiempo = lt
+            if avisos:
+                self.statusBar().showMessage("Aviso: " + " | ".join(avisos), 8000)
+                self._t_msg = time.perf_counter() + 4.0      # que el mensaje de t/θ no lo pise
         except Exception as e:
             self.linea_tiempo = None
             self.statusBar().showMessage(f"Perfil de giro inválido: {e}", 6000)
@@ -260,7 +343,7 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
 
     @manejador_seguro
     def _editar_linea_tiempo(self, *_):
-        self._editor = VentanaPerfilVelocidad(self.perfil_mov, self)
+        self._editor = VentanaPerfilVelocidad(self.perfil_mov, self, rango=self._rango_angulo_auto())
         self._editor.perfilAceptado.connect(self._perfil_aceptado)
         self._editor.show()
 
@@ -477,7 +560,7 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
         self.perfil_mov = d["perfil_movimiento"] if d["perfil_movimiento"] is not None \
             else copy.deepcopy(self.perfil_mov_defecto)
         for w, v in ((self.ui.checkBox_valpredeterminados, d["perfil_movimiento"] is None),
-                     (self.ui.comboBox_modo_pinon, s.get("modo_pinon", 0)),
+                     *self._combos_modo(s),
                      (self.ui.comboBox_modo_sim, s.get("modo", 0))):
             w.blockSignals(True)
             w.setChecked(v) if isinstance(w, QtWidgets.QCheckBox) else w.setCurrentIndex(int(v))
@@ -522,7 +605,7 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
     def _abrir_visibilidad(self, *_):
         if self._dlg_vis is None:
             self._dlg_vis = self.CLASE_DIALOGO_VISIBILIDAD(self.vis, self.sim.set_visibilidad, parent=self)
-        self._dlg_vis.actualizar_modo(self.ui.comboBox_modo_pinon.currentIndex() == 1)
+        self._dlg_vis.actualizar_modo(self._alterno())
         self._dlg_vis.show(); self._dlg_vis.raise_(); self._dlg_vis.activateWindow()
 
     # ------------------------------------------------------------------ navegación

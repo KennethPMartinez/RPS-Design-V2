@@ -19,6 +19,8 @@ def _crear_ventana(tipo: TipoSistema, retorno):
         from ui.epi_hipo_window import VentanaHipotrocoidal as clase
     elif tipo is TipoSistema.CREMALLERA:                 # en V2 se llama Trocoidal
         from ui.trocoidal_window import VentanaTrocoidal as clase
+    elif tipo is TipoSistema.PLANETARIO:
+        from ui.planetary_window import VentanaPlanetario as clase
     else:
         return None
     return clase(retorno=retorno)

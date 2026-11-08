@@ -53,6 +53,24 @@ class VentanaTrocoidal(VentanaSistemaBase):
     def _prrp(self) -> float:
         return self.motor_actual.rodillo.prrp if self.motor_actual is not None else 1.0
 
+    def _rango_angulo_auto(self):
+        """El piñón rueda sin deslizar: X = prrp·θ debe quedar en [0, L] -> θ en [0, L/prrp] (°)."""
+        if self.motor_actual is None:
+            return None
+        return 0.0, math.degrees(float(self.motor_actual.parametros.longitud_cremallera) / self._prrp())
+
+    def _rango_angulo_auto(self):
+        """El piñón rueda sin deslizar: X = prrp·θ debe quedar en [0, L] -> θ en [0, L/prrp] (°)."""
+        if self.motor_actual is None:
+            return None
+        return 0.0, math.degrees(float(self.motor_actual.parametros.longitud_cremallera) / self._prrp())
+
+    def _rango_angulo_auto(self):
+        """El piñón rueda sin deslizar: X = prrp·θ debe quedar en [0, L] -> θ en [0, L/prrp] (°)."""
+        if self.motor_actual is None:
+            return None
+        return 0.0, math.degrees(float(self.motor_actual.parametros.longitud_cremallera) / self._prrp())
+
     # rodadura sin deslizamiento: X = prrp·θ(rad)
     def _angulo_desde_valor(self, x_mm):
         return math.degrees(x_mm / self._prrp())

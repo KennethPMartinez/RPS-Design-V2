@@ -20,6 +20,9 @@ Perfildevelocidad_simulador_Window, para mapear directo UI <-> modelo <-> JSON.
 """
 from __future__ import annotations
 
+import copy
+import copy
+import copy
 import math
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -396,6 +399,81 @@ class LineaTiempo:
         a = backend_selector.a_numpy
         return cls(tiempos, entrada, a(pos), a(vel), a(acc), list(reg.errores))
 
+    # --- encaje de la posición en un rango permitido (p. ej. largo de la cremallera) ---
+    def rango_posicion(self) -> tuple[float, float]:
+        return float(np.min(self.pos)), float(np.max(self.pos))
+
+    def ajustada(self, lo: float, hi: float, escalar: bool = True):
+        """Encaja la posición en [lo, hi]. Devuelve (LineaTiempo, factor, desplazamiento, recortada).
+        1) escalar=True y el recorrido total > hi-lo -> se escala (pos, vel y acc son lineales: exacto).
+        2) Si aún sobresale por un extremo, se desplaza lo mínimo. 3) escalar=False y no cabe -> se recorta."""
+        pmin, pmax = self.rango_posicion()
+        ext, ancho = pmax - pmin, hi - lo
+        f = 1.0
+        if escalar and ext > ancho + 1e-9 and ext > 1e-12:
+            f = 0.999 * ancho / ext
+        smin, smax = f * pmin, f * pmax
+        off = (lo - smin) if smin < lo - 1e-9 else ((hi - smax) if smax > hi + 1e-9 else 0.0)
+        if f == 1.0 and off == 0.0:
+            return self, 1.0, 0.0, False
+        if not escalar and ext > ancho + 1e-9:
+            pos = np.clip(self.pos, lo, hi)
+            vel = np.gradient(pos, self.t)
+            acc = np.gradient(vel, self.t)
+            return LineaTiempo(self.t, self.entrada, pos, vel, acc, list(self.errores)), 1.0, 0.0, True
+        return (LineaTiempo(self.t, f * self.entrada, f * self.pos + off, f * self.vel, f * self.acc,
+                            list(self.errores)), f, off, False)
+
+    # --- encaje de la posición en un rango permitido (p. ej. largo de la cremallera) ---
+    def rango_posicion(self) -> tuple[float, float]:
+        return float(np.min(self.pos)), float(np.max(self.pos))
+
+    def ajustada(self, lo: float, hi: float, escalar: bool = True):
+        """Encaja la posición en [lo, hi]. Devuelve (LineaTiempo, factor, desplazamiento, recortada).
+        1) escalar=True y el recorrido total > hi-lo -> se escala (pos, vel y acc son lineales: exacto).
+        2) Si aún sobresale por un extremo, se desplaza lo mínimo. 3) escalar=False y no cabe -> se recorta."""
+        pmin, pmax = self.rango_posicion()
+        ext, ancho = pmax - pmin, hi - lo
+        f = 1.0
+        if escalar and ext > ancho + 1e-9 and ext > 1e-12:
+            f = 0.999 * ancho / ext
+        smin, smax = f * pmin, f * pmax
+        off = (lo - smin) if smin < lo - 1e-9 else ((hi - smax) if smax > hi + 1e-9 else 0.0)
+        if f == 1.0 and off == 0.0:
+            return self, 1.0, 0.0, False
+        if not escalar and ext > ancho + 1e-9:
+            pos = np.clip(self.pos, lo, hi)
+            vel = np.gradient(pos, self.t)
+            acc = np.gradient(vel, self.t)
+            return LineaTiempo(self.t, self.entrada, pos, vel, acc, list(self.errores)), 1.0, 0.0, True
+        return (LineaTiempo(self.t, f * self.entrada, f * self.pos + off, f * self.vel, f * self.acc,
+                            list(self.errores)), f, off, False)
+
+    # --- encaje de la posición en un rango permitido (p. ej. largo de la cremallera) ---
+    def rango_posicion(self) -> tuple[float, float]:
+        return float(np.min(self.pos)), float(np.max(self.pos))
+
+    def ajustada(self, lo: float, hi: float, escalar: bool = True):
+        """Encaja la posición en [lo, hi]. Devuelve (LineaTiempo, factor, desplazamiento, recortada).
+        1) escalar=True y el recorrido total > hi-lo -> se escala (pos, vel y acc son lineales: exacto).
+        2) Si aún sobresale por un extremo, se desplaza lo mínimo. 3) escalar=False y no cabe -> se recorta."""
+        pmin, pmax = self.rango_posicion()
+        ext, ancho = pmax - pmin, hi - lo
+        f = 1.0
+        if escalar and ext > ancho + 1e-9 and ext > 1e-12:
+            f = 0.999 * ancho / ext
+        smin, smax = f * pmin, f * pmax
+        off = (lo - smin) if smin < lo - 1e-9 else ((hi - smax) if smax > hi + 1e-9 else 0.0)
+        if f == 1.0 and off == 0.0:
+            return self, 1.0, 0.0, False
+        if not escalar and ext > ancho + 1e-9:
+            pos = np.clip(self.pos, lo, hi)
+            vel = np.gradient(pos, self.t)
+            acc = np.gradient(vel, self.t)
+            return LineaTiempo(self.t, self.entrada, pos, vel, acc, list(self.errores)), 1.0, 0.0, True
+        return (LineaTiempo(self.t, f * self.entrada, f * self.pos + off, f * self.vel, f * self.acc,
+                            list(self.errores)), f, off, False)
+
     def posicion_en(self, t: float) -> float:
         """Escalar por fotograma (reproducción interactiva)."""
         return float(np.interp(t, self.t, self.pos))
@@ -448,3 +526,21 @@ class FabricaPresets:
             T(0, 5, 0, 80, "Rampa cúbica", pendiente=None),
             T(5, 15, 80, 80, "Rampa lineal", pendiente=0.0),
             T(15, 20, 80, 0, "Rampa cúbica", pendiente=None)])
+
+
+def escalar_perfil(perfil: PerfilMovimiento, f: float) -> PerfilMovimiento:
+    """Copia del perfil con todas sus magnitudes multiplicadas por f (las leyes son lineales en y)."""
+    p = copy.deepcopy(perfil)
+    for t in p.tramos:
+        t.y_ini *= f
+        t.y_fin *= f
+        for ley in t.leyes:
+            q = ley.params
+            for k in ("amplitud", "pendiente", "pendiente_ini", "pendiente_fin"):
+                if q.get(k) is not None:
+                    q[k] = float(q[k]) * f
+            if "coeficientes" in q:
+                q["coeficientes"] = [float(c) * f for c in q["coeficientes"]]
+            if "puntos" in q:
+                q["puntos"] = [[x, y * f] for x, y in q["puntos"]]
+    return p

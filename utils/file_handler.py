@@ -14,14 +14,16 @@ from pathlib import Path
 from typing import Optional
 
 from config.data_structures import (AjustesVisibilidadSimulacion, ParametrosCremallera,
-                                    ParametrosEpitrocoidal, ParametrosHipotrocoidal)
+                                    ParametrosEpitrocoidal, ParametrosHipotrocoidal,
+                                    ParametrosPlanetario)
 from engine.motion_engine import PerfilMovimiento
 
 FORMATO = "RPS Design V2"
 VERSION = 2
 PARAMETROS_POR_SISTEMA = {"EPITROCOIDAL": ParametrosEpitrocoidal,
                           "HIPOTROCOIDAL": ParametrosHipotrocoidal,
-                          "TROCOIDAL": ParametrosCremallera}
+                          "TROCOIDAL": ParametrosCremallera,
+                          "PLANETARIO": ParametrosPlanetario}
 
 
 class ArchivoInvalido(ValueError):
