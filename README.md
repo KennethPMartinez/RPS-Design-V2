@@ -5,7 +5,7 @@
 
 Copiar los 5 módulos de Qt Designer (sin cambios) a la raíz o a `ui/designer/`:
 `Seleccion_de_sistema.py, EpitrocoidalV2.py, ToothProfile_Window.py, Graficas_Window.py,
-Perfildevelocidad_simulador_Window.py`. Seleccion_de_sistema necesita la carpeta `Recursos/`.
+Perfildevelocidad_simulador_Window.py`. Seleccion_de_sistema necesita la carpeta `ui/Recursos/`.
 Tests: `python -m pytest tests`
 
 ## Motor real

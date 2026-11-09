@@ -28,7 +28,7 @@ App de escritorio Python/PySide6 para diseño y simulación de sistemas de piñ�
 La UI solo lee/valida parámetros (dataclasses), el engine calcula, los widgets dibujan.
 
 - **Punto de entrada:** `main.py`. Busca los módulos de Qt Designer en cualquier subcarpeta (lista `MODULOS_UI`).
-- **Módulos de Qt Designer (copiar a `ui/designer/` o a la raíz):** `Seleccion_de_sistema`, `Epi_HipotrocoidalV2`, `TrocoidalV2`, `ToothProfile_Window`, `Graficas_Window`, `Perfildevelocidad_simulador_Window`, `Mostrar_Ocultar_Epitrocoidal`, `Mostrar_Ocultar_Hipotrocoidal`, `Mostrar_Ocultar_Trocoidal` (y `Mostrar_Ocultar_Planetario` cuando se migre Planetario). `Recursos/` junto a `main.py`.
+- **Módulos de Qt Designer (copiar a `ui/designer/` o a la raíz):** `Seleccion_de_sistema`, `Epi_HipotrocoidalV2`, `TrocoidalV2`, `ToothProfile_Window`, `Graficas_Window`, `Perfildevelocidad_simulador_Window`, `Mostrar_Ocultar_Epitrocoidal`, `Mostrar_Ocultar_Hipotrocoidal`, `Mostrar_Ocultar_Trocoidal` (y `Mostrar_Ocultar_Planetario` cuando se migre Planetario). `ui/Recursos/` junto a `main.py`.
 - **Jerarquía de ventanas (POO, DRY):**
   - `ui/sistema_base.py` → `VentanaSistemaBase`: debounce, Manual/Automático, línea de tiempo, motor real, grabación, abrir/guardar/exportar, resumen, ventanas auxiliares, visibilidad. Cada sistema define clases/widgets y los ganchos: `_crear_control`, `_widgets_control_manual`, `_valor_desde_angulo`/`_angulo_desde_valor`, `_resolver_estado`, `_curva_base`, `_preparar_ui`.
   - `ui/epi_hipo_window.py` → `VentanaEpiHipo` (angular, dial) → `VentanaEpitrocoidal`, `VentanaHipotrocoidal` (mismo `Epi_HipotrocoidalV2.ui`; Hipo ajusta rótulo "Engranaje Anular" y 36 dientes por defecto).
