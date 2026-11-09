@@ -151,52 +151,6 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
         """(combo, valor guardado) que se restauran al abrir un proyecto."""
         return ((self.ui.comboBox_modo_pinon, s.get("modo_pinon", 0)),)
 
-    def _crear_vista(self):
-        return reemplazar_widget(self.ui.graphicsView_epi, SimulationView())
-
-    def _alterno(self) -> bool:
-        """True si el piñón está en modo alterno (Orbitar / Trasladar)."""
-        return self.ui.comboBox_modo_pinon.currentIndex() == 1
-
-    def _rango_angulo_auto(self):
-        """(mín, máx) en ° que puede recorrer la línea de tiempo, o None si no hay límite
-        (Trocoidal: el piñón no debe salirse de la cremallera)."""
-        return None
-
-    def _conectar_modo_pinon(self):
-        self.ui.comboBox_modo_pinon.currentIndexChanged.connect(lambda *_: self._modo_pinon_cambiado())
-
-    def _conectar_propiedades(self):
-        u = self.ui
-        self._conectar_propiedades()
-
-    def _combos_modo(self, s: dict) -> tuple:
-        """(combo, valor guardado) que se restauran al abrir un proyecto."""
-        return ((self.ui.comboBox_modo_pinon, s.get("modo_pinon", 0)),)
-
-    def _crear_vista(self):
-        return reemplazar_widget(self.ui.graphicsView_epi, SimulationView())
-
-    def _alterno(self) -> bool:
-        """True si el piñón está en modo alterno (Orbitar / Trasladar)."""
-        return self.ui.comboBox_modo_pinon.currentIndex() == 1
-
-    def _rango_angulo_auto(self):
-        """(mín, máx) en ° que puede recorrer la línea de tiempo, o None si no hay límite
-        (Trocoidal: el piñón no debe salirse de la cremallera)."""
-        return None
-
-    def _conectar_modo_pinon(self):
-        self.ui.comboBox_modo_pinon.currentIndexChanged.connect(lambda *_: self._modo_pinon_cambiado())
-
-    def _conectar_propiedades(self):
-        u = self.ui
-        self._conectar_propiedades()
-
-    def _combos_modo(self, s: dict) -> tuple:
-        """(combo, valor guardado) que se restauran al abrir un proyecto."""
-        return ((self.ui.comboBox_modo_pinon, s.get("modo_pinon", 0)),)
-
     # ------------------------------------------------------------------ conexiones
     def _spins(self) -> tuple:
         return tuple(getattr(self.ui, nombre) for _, nombre in self.MAPEO_PARAMETROS)

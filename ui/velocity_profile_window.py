@@ -429,36 +429,6 @@ class VentanaPerfilVelocidad(QtWidgets.QMainWindow):
         self._msg_preset = f"Preset escalado ×{f:.3f} para caber en el recorrido del piñón ({hi - lo:.1f}°)."
         return escalar_perfil(perfil, f)
 
-    def _encajar_preset(self, perfil):
-        """Con un rango de recorrido el preset se escala para que el piñón no se salga."""
-        if self._rango is None:
-            return perfil
-        lo, hi = self._rango
-        try:
-            pmin, pmax = LineaTiempo.construir(perfil, RegistroLeyes(), 1600).rango_posicion()
-        except Exception:
-            return perfil
-        if pmax - pmin <= hi - lo + 1e-9:
-            return perfil
-        f = 0.999 * (hi - lo) / (pmax - pmin)
-        self._msg_preset = f"Preset escalado ×{f:.3f} para caber en el recorrido del piñón ({hi - lo:.1f}°)."
-        return escalar_perfil(perfil, f)
-
-    def _encajar_preset(self, perfil):
-        """Con un rango de recorrido el preset se escala para que el piñón no se salga."""
-        if self._rango is None:
-            return perfil
-        lo, hi = self._rango
-        try:
-            pmin, pmax = LineaTiempo.construir(perfil, RegistroLeyes(), 1600).rango_posicion()
-        except Exception:
-            return perfil
-        if pmax - pmin <= hi - lo + 1e-9:
-            return perfil
-        f = 0.999 * (hi - lo) / (pmax - pmin)
-        self._msg_preset = f"Preset escalado ×{f:.3f} para caber en el recorrido del piñón ({hi - lo:.1f}°)."
-        return escalar_perfil(perfil, f)
-
     def _marcar_curva_de_entrada(self):
         for nombre, c in self.checks.items():
             c.blockSignals(True); c.setChecked(nombre == self.perfil.propiedad); c.blockSignals(False)

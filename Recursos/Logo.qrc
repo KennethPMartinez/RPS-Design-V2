@@ -1,0 +1,5 @@
+<RCC>
+  <qresource prefix="newPrefix">
+    <file>RPSDesign_VID.png</file>
+  </qresource>
+</RCC>
