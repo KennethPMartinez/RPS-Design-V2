@@ -18,7 +18,6 @@ from dialogs.design_summary_dialog import DialogoResumenDiseno
 from dialogs.mostrar_ocultar_dialog import DialogoMostrarOcultarPlanetario
 from dialogs.visibility_dialog import DialogoMostrarOcultar
 from engine.planetario_engine import PlanetarioEngine, planetas_validos
-from exporters.excel_exporter import exportar_excel
 from ui.errores import manejador_seguro
 from ui.planetary_property_windows import VentanaPerfilDientePlanetario, VentanaPropiedadPlanetario
 from ui.sistema_base import VentanaSistemaBase
@@ -175,23 +174,12 @@ class VentanaPlanetario(VentanaSistemaBase):
         return est, self.motor_actual.contactos(est)
 
     # ------------------------------------------------------------------ menú
-    @manejador_seguro
-    def _exportar(self, *_):
+    def _items_exportacion(self):
         e = self.motor_actual
-        if e is None:
-            return
-        ruta, _f = QtWidgets.QFileDialog.getSaveFileName(self, "Exportar a Excel (se crean _sol y _anular)",
-                                                         self.ARCHIVO_EXCEL, "Libro de Excel (*.xlsx)")
-        if not ruta:
-            return
-        base = ruta[:-5] if ruta.lower().endswith(".xlsx") else ruta
-        QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.WaitCursor)
-        try:
-            exportar_excel(base + "_sol.xlsx", e.sol, e.p_sol)
-            exportar_excel(base + "_anular.xlsx", e.anular, e.p_anular)
-        finally:
-            QtWidgets.QApplication.restoreOverrideCursor()
-        self.statusBar().showMessage(f"Excel exportado: {base}_sol.xlsx y {base}_anular.xlsx", 5000)
+        return [("Sol", e.sol, e.p_sol), ("Anular", e.anular, e.p_anular)]
+
+    def _html_extra_exportacion(self) -> str:
+        return self.motor_actual.resumen_html()
 
     @manejador_seguro
     def _resumen(self, *_):

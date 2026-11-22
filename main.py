@@ -14,7 +14,7 @@ if RAIZ not in sys.path:
 MODULOS_UI = ["Seleccion_de_sistema", "Epi_HipotrocoidalV2", "TrocoidalV2", "ToothProfile_Window",
               "Graficas_Window", "Perfildevelocidad_simulador_Window", "Mostrar_Ocultar_Epitrocoidal",
               "Mostrar_Ocultar_Hipotrocoidal", "Mostrar_Ocultar_Trocoidal",
-              "PlanetarioV2", "Graficas_Window_PlanetarioV2", "ToothProfile_Window_PlanetarioV2"]
+              "PlanetarioV2", "Graficas_Window_PlanetarioV2", "ToothProfile_Window_PlanetarioV2", "Logo_rc"]
 
 from PySide6 import QtWidgets   # noqa: E402
 
@@ -44,6 +44,10 @@ def main() -> int:
     app = QtWidgets.QApplication(sys.argv)
     sys.excepthook = lambda t, v, tb: _mostrar_error(
         "Error inesperado", "".join(traceback.format_exception(t, v, tb)))
+    from utils.recursos import asegurar_recursos
+    asegurar_recursos(RAIZ)             # Logo_rc.py (Recursos/Logo.qrc)
+    from utils.recursos import asegurar_recursos
+    asegurar_recursos(RAIZ)             # Logo_rc.py (Recursos/Logo.qrc)
     faltan = localizar_modulos_ui()
     if faltan:
         _mostrar_error(

@@ -11,6 +11,12 @@ for ruta in (RAIZ, os.path.join(RAIZ, "ui", "designer")):
     if ruta not in sys.path:
         sys.path.insert(0, ruta)
 
+from utils.recursos import asegurar_recursos   # noqa: E402
+asegurar_recursos(RAIZ)                         # compila Recursos/Logo.qrc -> ui/designer/Logo_rc.py si falta
+
+from utils.recursos import asegurar_recursos   # noqa: E402
+asegurar_recursos(RAIZ)                         # compila Recursos/Logo.qrc -> ui/designer/Logo_rc.py si falta
+
 from PySide6 import QtWidgets   # noqa: E402
 
 from config.app_settings import ajustes          # noqa: E402

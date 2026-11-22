@@ -1,5 +1,5 @@
 <RCC>
-  <qresource prefix="newPrefix">
-    <file>RPSDesign_VID.png</file>
+  <qresource prefix="VisualID">
+    <file>RP-PG-TB_VisualID.png</file>
   </qresource>
 </RCC>

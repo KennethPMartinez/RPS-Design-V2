@@ -134,9 +134,14 @@ class VentanaPropiedadPlanetario(_VentanaAuxiliar):
             for t in g["etiquetas"]:
                 g["plot"].removeItem(t)
             g["etiquetas"] = []
+            # Los N planetas comparten θ_local (el reparto es simétrico): sus marcas caen en el MISMO punto de la
+            # curva. Se agrupan en UNA etiqueta de varias líneas para que no se encimen.
+            grupos = {}
             for px, py, c in puntos:
-                t = pg.TextItem(f"P{c['planeta'] + 1}·R{c['indice']}", color=pg.getConfigOption("foreground"),
-                                anchor=(0, 1))
+                grupos.setdefault((round(px, 5), round(py, 5)), (px, py, []))[2].append(
+                    f"P{c['planeta'] + 1}·R{c['indice']}")
+            for px, py, textos in grupos.values():
+                t = pg.TextItem("\n".join(textos), color=pg.getConfigOption("foreground"), anchor=(0, 1))
                 t.setPos(px, py)
                 g["plot"].addItem(t, ignoreBounds=True)
                 g["etiquetas"].append(t)

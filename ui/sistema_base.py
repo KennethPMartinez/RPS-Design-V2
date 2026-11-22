@@ -529,15 +529,25 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
     def _exportar(self, *_):
         if self.motor_actual is None:
             return
-        ruta, _f = QtWidgets.QFileDialog.getSaveFileName(self, "Exportar a Excel", self.ARCHIVO_EXCEL, "Libro de Excel (*.xlsx)")
-        if not ruta:
-            return
-        QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.WaitCursor)
-        try:
-            exportar_excel(ruta, self.motor_actual, self.leer_parametros())
-        finally:
-            QtWidgets.QApplication.restoreOverrideCursor()
-        self.statusBar().showMessage(f"Excel exportado: {ruta}", 5000)
+        from exporters.export_manager import exportar_con_dialogo
+        exportar_con_dialogo(self, self._items_exportacion(), self.NOMBRE, self.ARCHIVO_EXCEL,
+                             self._html_extra_exportacion())
+
+    def _items_exportacion(self) -> list:
+        """[(etiqueta, motor, parámetros)]: un elemento por engranaje a exportar (planetario: sol y anular)."""
+        return [("", self.motor_actual, self.leer_parametros())]
+
+    def _html_extra_exportacion(self) -> str:
+        """HTML que antecede a las secciones del informe PDF (planetario: resumen cinemático)."""
+        return ""
+
+    def _items_exportacion(self) -> list:
+        """[(etiqueta, motor, parámetros)]: un elemento por engranaje a exportar (planetario: sol y anular)."""
+        return [("", self.motor_actual, self.leer_parametros())]
+
+    def _html_extra_exportacion(self) -> str:
+        """HTML que antecede a las secciones del informe PDF (planetario: resumen cinemático)."""
+        return ""
 
     # ------------------------------------------------------------------ menú: otras ventanas
     @manejador_seguro

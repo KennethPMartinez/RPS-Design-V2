@@ -116,3 +116,18 @@ Q2 diálogos: versión `actualizar_modo`/`HABILITACION_POR_MODO` apuntando a los
 - **§10.6 Archivos**: `ParametrosPlanetario` gana `componente_entrada`; `Componente(str, Enum)` (serializa a JSON); `file_handler` acepta `PLANETARIO`. `sistema_base.py` gana ganchos (`_crear_vista`, `_alterno`, `_rango_angulo_auto`, `_conectar_modo_pinon`, `_conectar_propiedades`, `_combos_modo`).
 - **Pendiente de verificar a mano**: prueba visual del Planetario (4 combinaciones, N = 2/3/4, contactos sol y anular, etiquetas); que el salto de la raíz hipotrocoidal haya desaparecido; Trocoidal automático con L distintos. Opcional: generar `Mostrar_Ocultar_Planetario.py` con `pyside6-uic` (mientras no exista se usa un diálogo equivalente por código).
 - **Tests nuevos**: `test_planetario.py` (Willis, N válidos, contactos con sol/anular, rodillo activo = posición en el mundo), `test_contacto_y_rango.py` (refinamiento, `ajustada`, `escalar_perfil`).
+
+---
+
+## 11. Cambios 11-nov-2026 (V2 · lote 3)
+
+- **§11.1 Exportaciones completas** (`exporters/export_manager.py`): Archivo → Exportar abre UN cuadro y el filtro decide el formato. Todos salen del mismo cálculo (`base_exporter.recopilar`, 2001 puntos, θ = 0 en la raíz, unidades mm/rad).
+  - **XLSX** (`excel_exporter`): hoja 1 «Perfil diente (CAD)» con SOLO X, Y, Z; luego Perfil (θ, X, Y, generatriz), Ángulo de presión, Radio de curvatura, Camino de contacto y Resumen.
+  - **CSV / TXT** (`csv_exporter`): nube de puntos [X, Y, Z, Theta]; CSV con coma, TXT con tabulador y cabecera `#`.
+  - **DXF** (`dxf_exporter`): R12 ASCII sin dependencias; polilíneas de 2001 vértices en las capas PERFIL_DIENTE y GENERATRIZ (mm; R12 no declara unidades). Validado con ezdxf (0 errores de auditoría).
+  - **PDF** (`pdf_exporter`, `plot_figures`): parámetros de entrada, tolerancias lineal/angular, geometría derivada, resultados críticos con diagnóstico de subcorte y las 4 gráficas (fondo blanco, independiente del tema). Solo Qt: QTextDocument + QPdfWriter, paginado a mano con pie «Página i de n».
+  - Planetario: un archivo por engranaje (`_sol`, `_anular`) y un único PDF con resumen cinemático.
+  - Formato nativo del proyecto: se mantiene JSON (decisión: lo pueden leer otras aplicaciones). No se crea `.rpsproj`.
+- **§11.2 Logo**: `Seleccion_de_sistema.py` importa `Logo_rc` (compilado de `Recursos/Logo.qrc`). `utils/recursos.asegurar_recursos` lo genera en `ui/designer/` al arrancar si falta (pyside6-rcc). Para actualizar el logo: borrar `Logo_rc.py`.
+- **§11.3 Planetario, solapamiento de etiquetas**: los N planetas comparten θ_local (reparto simétrico), así que sus marcas caían en el mismo punto; ahora se agrupan en una etiqueta de varias líneas (`P1·R8 / P2·R0 / P3·R4`).
+- **Tests nuevos**: `test_exportadores.py` (hoja CAD = X,Y,Z; CSV/TXT; DXF con ezdxf; planetario `_sol/_anular` y PDF).
