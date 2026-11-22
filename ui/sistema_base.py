@@ -30,13 +30,12 @@ from config.data_structures import AjustesVisibilidadSimulacion
 from dialogs.design_summary_dialog import DialogoResumenDiseno
 from engine.cinematica_engine import SolverCinematico
 from engine.motion_engine import PRESET_DEFECTO, FabricaPresets, LineaTiempo, RegistroLeyes
-from engine.motor_plan import plan_alineacion, planificar
 from exporters.excel_exporter import exportar_excel
 from exporters.video_recorder import GrabadorVideo
-from hardware.motor_controller import obtener_controlador
 from ui.errores import manejador_seguro
 from ui.property_windows import VentanaPerfilDiente, VentanaPropiedad
-from ui.settings_window import SettingsWindow
+from simulation.frame_scheduler import FrameScheduler
+from ui.ajustes_runtime import runtime
 from ui.velocity_profile_window import VentanaPerfilVelocidad
 from utils import file_handler
 from widgets.pg_helpers import reemplazar_widget
@@ -90,9 +89,9 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
         self._anim.setInterval(8)
         self._anim.timeout.connect(self._tick)
 
-        self.motor_ctrl = obtener_controlador()
-        self.motor_ctrl.terminado.connect(self._motor_terminado)
-        self.motor_ctrl.progreso.connect(self._motor_progreso)
+        sim = runtime.estado.simulacion         # cadencia visual (FPS) desde Ajustes; el tiempo sigue siendo perf_counter
+        self._scheduler = FrameScheduler(self, self._anim, sim.fps, sim.fps_personalizado, sim.bajar_fps_inactivo)
+        runtime.cambiado.connect(self._ajustes_cambiaron)
         self._conectar()
         self._aplicar_modo()
         self._recalcular()
@@ -173,7 +172,7 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
         u.actionAbrir.triggered.connect(lambda *_: self._abrir())
         u.actionGuardar.triggered.connect(lambda *_: self._guardar())
         u.actionExportar.triggered.connect(lambda *_: self._exportar())
-        u.actionConfiguraci_n.triggered.connect(lambda *_: SettingsWindow(self).exec())
+        u.actionConfiguraci_n.triggered.connect(lambda *_: runtime.abrir_dialogo(self))
         u.actionCerrar.triggered.connect(lambda *_: self.volver_al_menu())
         u.actionGu_a_T_cnica.triggered.connect(lambda *_: QtWidgets.QMessageBox.information(
             self, "Guía técnica", "La guía técnica se desarrollará más adelante."))
@@ -308,10 +307,7 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
         chk.blockSignals(True); chk.setChecked(False); chk.blockSignals(False)
         self._reconstruir_auto()
 
-    # -- reproducción + motor real --------------------------------------
-    def _motor_activo(self) -> bool:
-        return ajustes.motor.habilitado and self._es_auto()
-
+    # -- reproducción (solo simulación: el control del banco físico vive en otra aplicación) ----------
     @manejador_seguro
     def _play(self, *_):
         lt = self.linea_tiempo
@@ -319,80 +315,19 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
             return
         if self._t >= lt.t_fin:
             self._t = lt.t_ini
-        if self._motor_activo():
-            ctrl, aj = self.motor_ctrl, ajustes.motor
-            if not ctrl.conectado:
-                QtWidgets.QMessageBox.information(self, "Motor", "El motor está habilitado pero no conectado.\n"
-                                                  "Conéctalo en Archivo → Ajustes.")
-                return
-            if ctrl.ocupado():
-                self.statusBar().showMessage("Esperando a que el motor termine de detenerse…", 3000)
-                return
-            error = lt.posicion_en(self._t) - ctrl.pos_deg
-            if abs(error) > aj.tolerancia_silenciosa_deg:
-                r = self._preguntar_desfase(error)
-                if r == "cancelar":
-                    return
-                if r == "alinear":
-                    self.statusBar().showMessage(f"Alineando el motor ({error:+.1f}°)…")
-                    ctrl.ejecutar([plan_alineacion(error, aj)], "alineacion")
-                    return                      # la simulación arranca al terminar la alineación
-                ctrl.referenciar(lt.posicion_en(self._t))
         self._arrancar()
 
-    def _preguntar_desfase(self, error: float) -> str:
-        m = QtWidgets.QMessageBox(self)
-        m.setWindowTitle("Motor desalineado")
-        m.setText(f"La posición estimada del motor difiere {error:+.1f}° de la simulación.")
-        b_al = m.addButton("Alinear (mover el motor)", QtWidgets.QMessageBox.ButtonRole.AcceptRole)
-        b_ref = m.addButton("Tomar la posición actual como referencia", QtWidgets.QMessageBox.ButtonRole.ActionRole)
-        m.addButton("Cancelar", QtWidgets.QMessageBox.ButtonRole.RejectRole)
-        m.exec()
-        return {b_al: "alinear", b_ref: "referenciar"}.get(m.clickedButton(), "cancelar")
-
     def _arrancar(self):
-        lt = self.linea_tiempo
-        if self._motor_activo() and self.motor_ctrl.conectado:
-            segs, avisos = planificar(lt, self._t, self.motor_ctrl.pos_deg, ajustes.motor)
-            if avisos:
-                self.statusBar().showMessage("Motor: " + " ".join(avisos), 8000)
-            self.motor_ctrl.ejecutar(segs, "perfil")
         self._t_ultimo = time.perf_counter()
         self._anim.start()
 
-    @manejador_seguro
-    def _motor_terminado(self, ok: bool, msg: str, etiqueta: str):
-        if etiqueta == "alineacion":
-            if ok and self._es_auto():
-                self._arrancar()
-            elif msg:
-                QtWidgets.QMessageBox.warning(self, "Motor", f"Falló la alineación:\n{msg}")
-        elif not ok and msg:                    # error real (no una parada pedida por el usuario)
-            self._pausar(detener_motor=False)
-            QtWidgets.QMessageBox.warning(self, "Motor", f"El motor reportó un error y se detuvo la simulación:\n{msg}")
-
-    def _motor_progreso(self, i: int, n: int):
-        if self._anim.isActive():
-            self.statusBar().showMessage(f"Motor: tramo {i}/{n}", 1500)
-
-    def _pausar(self, detener_motor: bool = True):
-        corriendo = self._anim.isActive()
+    def _pausar(self):
         self._anim.stop()
-        if detener_motor:
-            estaba = self.motor_ctrl.ocupado()
-            self.motor_ctrl.detener()
-            if corriendo and estaba and self.linea_tiempo is not None and self._es_auto():
-                self._resincronizar_con_motor()
 
-    def _resincronizar_con_motor(self):
-        """Tras pausar, el motor queda donde lo dejó la parada (estimado) y va por detrás de la
-        simulación: se retrocede el tiempo hasta el instante cuya posición coincide con el motor."""
-        lt, dt = self.linea_tiempo, 2.0 * ajustes.motor.dt_segmento
-        idx = np.flatnonzero((lt.t <= self._t + dt) & (lt.t >= self._t - dt))
-        if idx.size:
-            k = idx[int(np.argmin(np.abs(lt.pos[idx] - self.motor_ctrl.pos_deg)))]
-            self._t = float(lt.t[k])
-            self._mostrar_auto()
+    def _ajustes_cambiaron(self, estado):
+        """Tras Aplicar/Aceptar en Ajustes: nueva cadencia visual (no altera el tiempo simulado)."""
+        sim = estado.simulacion
+        self._scheduler.set_preferences(sim.fps, sim.fps_personalizado, sim.bajar_fps_inactivo)
 
     def _reiniciar(self):
         self._pausar()
@@ -407,7 +342,7 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
         self._t_ultimo = ahora
         if self._t >= self.linea_tiempo.t_fin:
             self._t = self.linea_tiempo.t_fin
-            self._pausar(detener_motor=False)      # el último tramo del motor termina solo
+            self._pausar()
         self._mostrar_auto()
 
     def _mostrar_auto(self):
@@ -541,14 +476,6 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
         """HTML que antecede a las secciones del informe PDF (planetario: resumen cinemático)."""
         return ""
 
-    def _items_exportacion(self) -> list:
-        """[(etiqueta, motor, parámetros)]: un elemento por engranaje a exportar (planetario: sol y anular)."""
-        return [("", self.motor_actual, self.leer_parametros())]
-
-    def _html_extra_exportacion(self) -> str:
-        """HTML que antecede a las secciones del informe PDF (planetario: resumen cinemático)."""
-        return ""
-
     # ------------------------------------------------------------------ menú: otras ventanas
     @manejador_seguro
     def _resumen(self, *_):
@@ -579,11 +506,6 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
 
     def closeEvent(self, e):
         self._pausar()
-        for sig, slot in ((self.motor_ctrl.terminado, self._motor_terminado), (self.motor_ctrl.progreso, self._motor_progreso)):
-            try:
-                sig.disconnect(slot)
-            except (RuntimeError, TypeError):
-                pass
         for w in list(self._aux):
             w.close()
         if self._retorno is not None and self._retorno.isHidden():

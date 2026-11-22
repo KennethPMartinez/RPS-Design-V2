@@ -36,6 +36,11 @@ def configurar_menu_plot(plot: pg.PlotWidget, titulo: str, geometrica: bool = Fa
     Transformadas (solo la línea de tiempo). `geometrica` se conserva por compatibilidad."""
     plot._menu = MenuGrafica(plot, titulo, transformadas)
     _PLOTS.add(plot)
+    try:        # tema de Ajustes también para gráficas creadas después del arranque
+        from ui.ajustes_runtime import runtime
+        runtime.tema_a_plot(plot)
+    except Exception:
+        pass
     return plot
 
 

@@ -1,0 +1,6 @@
+LOTE 5 - Integración de Ajustes (22-nov-2026)
+Copiar el contenido del zip sobre el repo, respetando carpetas. Además, BORRAR (ya se movieron a banco_legacy/):
+  hardware/            engine/motor_plan.py        tests/test_motor_plan.py
+  tests/Arduino_Test.py   ui/epitrocoidal_window.py
+(con git: git mv hardware banco_legacy/hardware ... o simplemente borrarlos tras copiar).
+Luego: python -m pytest tests --ignore=tests/RPS_Ajustes_Claude   y   python main.py

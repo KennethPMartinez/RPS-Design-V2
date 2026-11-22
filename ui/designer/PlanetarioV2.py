@@ -474,7 +474,7 @@ class Ui_PlanetarioV2(object):
         self.Controldebanco.setObjectName(u"Controldebanco")
         self.Controldebanco.setMinimumSize(QSize(296, 100))
         icon = QIcon()
-        icon.addFile(u"../../Recursos/RP-PG-TB_VisualID.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon.addFile(u"Recursos/RP-PG-TB_VisualID.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.Controldebanco.setIcon(icon)
         self.Controldebanco.setIconSize(QSize(250, 100))
 

@@ -12,7 +12,7 @@ if RAIZ not in sys.path:
 
 # Módulos generados por Qt Designer (pyside6-uic). Se buscan en TODA la carpeta del proyecto.
 MODULOS_UI = ["Seleccion_de_sistema", "Epi_HipotrocoidalV2", "TrocoidalV2", "ToothProfile_Window",
-              "Graficas_Window", "Perfildevelocidad_simulador_Window", "Mostrar_Ocultar_Epitrocoidal",
+              "Graficas_Window", "Perfildevelocidad_simulador_Window", "Mostrar_Ocultar_Epitrocoidal", "Mostrar_Ocultar_Epitrocoide",
               "Mostrar_Ocultar_Hipotrocoidal", "Mostrar_Ocultar_Trocoidal",
               "PlanetarioV2", "Graficas_Window_PlanetarioV2", "ToothProfile_Window_PlanetarioV2", "Logo_rc"]
 
@@ -29,6 +29,11 @@ def localizar_modulos_ui() -> list:
                 if base not in sys.path:
                     sys.path.insert(0, base)
                 pendientes.discard(m)
+    # Nombres alternativos que Designer pudo generar (el diálogo acepta cualquiera de los dos)
+    for oficial, alterno in (("Mostrar_Ocultar_Epitrocoidal", "Mostrar_Ocultar_Epitrocoide"),):
+        if oficial not in pendientes or alterno not in pendientes:     # basta con que exista uno
+            pendientes.discard(oficial)
+            pendientes.discard(alterno)
     return sorted(pendientes)
 
 
@@ -44,10 +49,9 @@ def main() -> int:
     app = QtWidgets.QApplication(sys.argv)
     sys.excepthook = lambda t, v, tb: _mostrar_error(
         "Error inesperado", "".join(traceback.format_exception(t, v, tb)))
-    from utils.recursos import asegurar_recursos
-    asegurar_recursos(RAIZ)             # Logo_rc.py (Recursos/Logo.qrc)
-    from utils.recursos import asegurar_recursos
-    asegurar_recursos(RAIZ)             # Logo_rc.py (Recursos/Logo.qrc)
+    from utils.recursos import asegurar_recursos, normalizar_rutas_designer
+    asegurar_recursos(RAIZ)             # Logo_rc.py (Recursos/Logo.qrc); se recompila si el .qrc cambió
+    normalizar_rutas_designer(RAIZ)     # "../../Recursos/" -> "Recursos/" (el cwd es la raíz)
     faltan = localizar_modulos_ui()
     if faltan:
         _mostrar_error(
@@ -58,13 +62,14 @@ def main() -> int:
         return 1
 
     from config.app_settings import ajustes
-    from hardware.motor_controller import obtener_controlador
     from ui.style_manager import aplicar_tema
     from widgets.pg_helpers import configurar_pyqtgraph
 
+    from ui.ajustes_runtime import runtime
+    runtime.iniciar(app)                # QSettings -> ajustes (OpenGL, backend, desviaciones) ANTES de crear ventanas
     configurar_pyqtgraph(ajustes.render_opengl, ajustes.modo_oscuro)
     aplicar_tema(app, ajustes.modo_oscuro)
-    app.aboutToQuit.connect(lambda: obtener_controlador().desconectar())   # frena y cierra el puerto
+    runtime.aplicar_tema_guardado()     # preset/colores/fuentes/trazos guardados
     from ui.main_menu import MenuPrincipal
     menu = MenuPrincipal()
     menu.show()

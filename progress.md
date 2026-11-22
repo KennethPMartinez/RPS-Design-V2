@@ -101,8 +101,9 @@ Q2 diálogos: versión `actualizar_modo`/`HABILITACION_POR_MODO` apuntando a los
 | 2026-10-25 | Primera versión: estado de V2 hasta la reconstrucción de los archivos de Designer. |
 | 2026-11-01 | Lote 1: menú en español, Ver todo, transformadas, migración de Hipotrocoidal y Trocoidal (§8). |
 | 2026-11-08 | Lote 2: Planetario + correcciones de 6.2 (contactos hipo, Trocoidal automático dentro de L) (§10). |
-| 2026-11-08 | Lote 2: Planetario + correcciones de 6.2 (contactos hipo, Trocoidal automático dentro de L) (§10). |
-| 2026-11-08 | Lote 2: Planetario + correcciones de 6.2 (contactos hipo, Trocoidal automático dentro de L) (§10). |
+| 2026-11-11 | Lote 3: exportaciones completas, logo, etiquetas del planetario (§11). |
+| 2026-11-21 | Lote 4: imágenes de botones/logo, limpieza de duplicados; Ajustes en curso (§12). |
+| 2026-11-22 | Lote 5: Ajustes integrados (tema global, FPS), control de banco archivado en `banco_legacy/` (§13). |
 
 ---
 
@@ -131,3 +132,46 @@ Q2 diálogos: versión `actualizar_modo`/`HABILITACION_POR_MODO` apuntando a los
 - **§11.2 Logo**: `Seleccion_de_sistema.py` importa `Logo_rc` (compilado de `Recursos/Logo.qrc`). `utils/recursos.asegurar_recursos` lo genera en `ui/designer/` al arrancar si falta (pyside6-rcc). Para actualizar el logo: borrar `Logo_rc.py`.
 - **§11.3 Planetario, solapamiento de etiquetas**: los N planetas comparten θ_local (reparto simétrico), así que sus marcas caían en el mismo punto; ahora se agrupan en una etiqueta de varias líneas (`P1·R8 / P2·R0 / P3·R4`).
 - **Tests nuevos**: `test_exportadores.py` (hoja CAD = X,Y,Z; CSV/TXT; DXF con ezdxf; planetario `_sol/_anular` y PDF).
+
+---
+
+## 12. Cambios 21-nov-2026 (V2 · lote 4)
+
+- **§12.1 Botones de Seleccion_de_sistema sin imagen (causa y arreglo)**: al regenerar con `pyside6-uic`, `ui/designer/Seleccion_de_sistema.py` y `PlanetarioV2.py` quedaron con rutas relativas al .ui (`../../Recursos/x.png`), pero `main.py` hace `os.chdir(RAIZ)`, así que no resolvían (`ui/designer` gana en `sys.path` a `ui/Seleccion_de_sistema.py`, que usaba `Recursos/...`). Arreglo: `utils/recursos.normalizar_rutas_designer(raiz)` reescribe `../../Recursos/` → `Recursos/` en `ui/designer/*.py` al arrancar (idempotente; sobrevive a regenerar con uic) y ya se aplicó a los dos archivos. No se tocaron los .ui.
+- **§12.2 Logo roto tras cambiar el .qrc**: `Logo.qrc` pasó a `VisualID/RP-PG-TB_VisualID.png`, pero `Seleccion_de_sistema` (.ui y .py) aún pide `:/newPrefix/RPSDesign_VID.png`, y `asegurar_recursos` no recompilaba si `Logo_rc.py` ya existía. Arreglo: el `.qrc` conserva ambos recursos, y `asegurar_recursos` recompila si cambia el .qrc o cualquier imagen (huella SHA-256 en `ui/designer/.logo_rc.sha256`, en `.gitignore`). `Logo_rc.py` sigue versionado; se regenera solo en la primera ejecución.
+- **§12.3 Duplicados eliminados** (parche aplicado dos veces): llamada doble a `asegurar_recursos` en `main.py` y `main.pyw`; `_items_exportacion` / `_html_extra_exportacion` duplicados en `ui/sistema_base.py`; filas repetidas en §9.
+- **§12.4 Ajustes**: `tests/RPS_Ajustes_Claude/` (settings_model/store, theme_manager, frame_scheduler, sampling_preferences, settings_adapter) y `ui/designer/Ajustes.ui/.py` están en el repo SIN integrar; `ui/settings_window.py` sigue siendo la versión provisional. Siguiente: integrarlos sin hardware físico en la ventana de Ajustes, conectar el arranque de preferencias y el tema a ventanas nuevas.
+- **Tests nuevos**: `test_recursos.py` (normalización de rutas, huella del .qrc).
+- **Pendiente de verificar a mano**: abrir la app y comprobar que los 4 botones y el logo muestran imagen; que `Logo_rc.py` se recompila (requiere PySide6 con `pyside6-rcc`).
+
+---
+
+## 13. Cambios 22-nov-2026 (V2 · lote 5: integración de Ajustes)
+
+Fuente: `tests/RPS_Ajustes_Claude/` (guía + prompt) con el **`ui/designer/Ajustes.ui` del repo** (el del usuario, sin tocarlo).
+
+- **§13.1 Módulos integrados**: `config/settings_model.py`, `config/settings_store.py` (QSettings), `ui/selector_color_rps.py` (idéntico byte a byte al original, SHA-256 `24f3003e…`), `ui/theme_manager.py`, `ui/settings_window.py` (sustituye la provisional), `simulation/frame_scheduler.py`, `engine/sampling_preferences.py` y `exporters/settings_adapter.py`. La carpeta `tests/RPS_Ajustes_Claude/` se conserva como referencia.
+- **§13.2 .ui del repo ≠ .ui del paquete**: el del repo conserva nombres de Designer (`pushButton`, `pushButton_2/3/4`, `checkBox`, `checkBox_2`, `checkBox_3`) y no tiene los campos de video `comboResolucionVideo`, `comboFPSVideo`, `spinCRFVideo` (solo sus etiquetas). `SettingsWindow` resuelve los nombres con `ALIAS_WIDGETS` (btnCancelar→pushButton_2, btnAplicar→pushButton_3, btnAceptar→pushButton_4, btnRestaurar→pushButton, chkRestaurarSesion→checkBox, chkConfirmarSalir→checkBox_2, chkSimulacionPorContacto→checkBox_3) y trata los tres campos de video como OPCIONALES (se omiten y conservan lo guardado). Para activarlos: añadirlos en Designer con esos nombres.
+- **§13.3 Instancia única** (`ui/ajustes_runtime.py`): `runtime.iniciar(app)` (QSettings → `ajustes`, con fallback a predeterminados si la config es ilegible) → `configurar_pyqtgraph`/`aplicar_tema` → `runtime.aplicar_tema_guardado()`. Señal `runtime.cambiado` tras Aplicar/Aceptar; `runtime.abrir_dialogo(parent)` (menú Archivo → Ajustes en `sistema_base`). `widgets/pg_helpers.configurar_menu_plot` aplica el tema vigente a las gráficas nuevas.
+- **§13.4 Transacciones**: Aplicar valida, aplica y persiste (el diálogo sigue abierto); Aceptar = Aplicar + cerrar; Cancelar no persiste; Restaurar solo modifica el formulario. Probado en `test_ajustes_qt.py`.
+- **§13.5 FPS**: `VentanaSistemaBase` usa `FrameScheduler` sobre el `QTimer` `_anim` (monitor activo / 30–240 / personalizado / sin límite / menos FPS inactivo). El tiempo sigue siendo `time.perf_counter()` (no `1/FPS`).
+- **§13.6 Control de banco fuera de la app**: `hardware/`, `engine/motor_plan.py`, `tests/test_motor_plan.py`, `tests/Arduino_Test.py` y `ui/epitrocoidal_window.py` (copia sin uso) pasaron a `banco_legacy/` (no se importa desde la app; `test_motor_plan` sigue pasando). `AjustesMotor` salió de `config/app_settings.py`. Se eliminaron de `sistema_base`: `motor_ctrl`, alineación/desfase, `_resincronizar_con_motor` y el arranque por puerto serie. La app ya no necesita pyserial. CPU/GPU/Híbrido se conserva (NumPy/CuPy).
+- **§13.7 Bugs hallados al integrar**: (a) `ThemeManager` ponía `foreground`/`background` de pyqtgraph como `QColor`, pero `simulation_view` y `planetary_view` leen `getConfigOption("foreground")[0]` → ahora tuplas RGB (test de regresión); (b) el repo tiene `Mostrar_Ocultar_Epitrocoide.py` y el código pedía `Mostrar_Ocultar_Epitrocoidal` → `main.py` y `dialogs/mostrar_ocultar_dialog.py` aceptan cualquiera de los dos.
+- **Tabla de requisitos**
+  | Requisito | Estado |
+  |---|---|
+  | Tema global (paleta, fuentes UI/gráficas, colores técnicos, trazos) + presets propios | Integrado (probado paleta; falta revisión visual en Windows de widgets con estilo propio en `set_tema`) |
+  | Selector de color original | Conservado sin cambios |
+  | FPS monitor/fijo/sin límite/inactivo | Integrado (probado intervalo del timer) |
+  | Backend CPU/GPU/Híbrido, OpenGL, desviaciones | Integrado vía `ajustes` |
+  | Persistencia + Cancelar/Aplicar | Integrado y probado (QSettings en offscreen) |
+  | V-Sync | Solo se guarda; no se afirma activo |
+  | Simulación por contacto | Solo se guarda; el solver no existe |
+  | Detener ante inválido, conservar pausa, caché de geometría | Solo se guardan (sin hooks) |
+  | Guardado automático, restaurar sesión, confirmar salida | Solo se guardan (faltan hooks de proyecto/cierre) |
+  | Muestreo uniforme/adaptativo | Módulo independiente probado; NO conectado a `contact_engine` (comparar tolerancias primero) |
+  | Exportación a resolución/calidad elegidas (`settings_adapter`) | Pendiente de conectar a menú de imagen y a `GrabadorVideo`; campos de video ausentes en el .ui |
+  | VP9/WebM | Pendiente (el adaptador lanza `NotImplementedError`) |
+  | Migrar tips a la Guía Técnica | Diferido a propósito (solo consignado) |
+- **Tests**: `test_ajustes_contract` / `_sampling` / `_widgets` / `_qt` (Qt offscreen), más `banco_legacy/test_motor_plan`. Suite: 44 pasaron, 2 omitidos. Smoke offscreen: arranque, 3 ventanas (Epi, Trocoidal, Planetario) y cambio de FPS sin errores. **No** se probó con ventana real en Windows ni con GPU.
+- **§13.8 Trazos enormes al cambiar de tema (corregido)**: `ThemeManager.pen` creaba `QPen` no cosmético, así que el ancho se interpretaba en unidades de datos (mm) y, al aplicar un tema con la ventana abierta, el perfil y los rodillos salían gruesísimos (al abrir una ventana nueva no pasaba porque sus items aún no existían cuando se aplicaba el tema). Ahora `pen.setCosmetic(True)` (ancho en píxeles). Test: `test_trazos_en_pixeles_y_no_en_unidades_de_datos`.

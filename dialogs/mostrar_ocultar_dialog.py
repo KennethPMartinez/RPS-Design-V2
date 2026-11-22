@@ -18,6 +18,9 @@ from config.data_structures import AjustesVisibilidadSimulacion
 from ui.errores import manejador_seguro
 
 
+ALTERNATIVAS_MODULO_UI = {"Mostrar_Ocultar_Epitrocoidal": "Mostrar_Ocultar_Epitrocoide"}
+
+
 class DialogoMostrarOcultarBase(QtWidgets.QDialog):
     MODULO_UI: str = ""
     CLASE_UI: str = ""
@@ -26,7 +29,14 @@ class DialogoMostrarOcultarBase(QtWidgets.QDialog):
 
     def __init__(self, ajustes: AjustesVisibilidadSimulacion, callback_cambio, parent=None):
         super().__init__(parent)
-        modulo = __import__(self.MODULO_UI)
+        try:
+            modulo = __import__(self.MODULO_UI)
+        except ModuleNotFoundError:
+            # Designer pudo regenerar el módulo con otro nombre (p. ej. Mostrar_Ocultar_Epitrocoide.py)
+            alt = ALTERNATIVAS_MODULO_UI.get(self.MODULO_UI)
+            if alt is None:
+                raise
+            modulo = __import__(alt)
         self.ui = getattr(modulo, self.CLASE_UI)()
         self.ui.setupUi(self)
         self._ajustes = ajustes

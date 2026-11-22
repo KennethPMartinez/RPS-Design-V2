@@ -47,7 +47,7 @@ class Ui_MainWindow(object):
         self.pushButton_planetario.setMinimumSize(QSize(240, 240))
         self.pushButton_planetario.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         icon = QIcon()
-        icon.addFile(u"../../Recursos/Planetary.PNG", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon.addFile(u"Recursos/Planetary.PNG", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.pushButton_planetario.setIcon(icon)
         self.pushButton_planetario.setIconSize(QSize(230, 230))
 
@@ -60,7 +60,7 @@ class Ui_MainWindow(object):
         self.pushButton_cremallera.setMinimumSize(QSize(240, 240))
         self.pushButton_cremallera.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         icon1 = QIcon()
-        icon1.addFile(u"../../Recursos/rackandpinion.PNG", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon1.addFile(u"Recursos/rackandpinion.PNG", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.pushButton_cremallera.setIcon(icon1)
         self.pushButton_cremallera.setIconSize(QSize(230, 230))
 
@@ -73,7 +73,7 @@ class Ui_MainWindow(object):
         self.pushButton_epitrocoidal.setMinimumSize(QSize(240, 240))
         self.pushButton_epitrocoidal.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         icon2 = QIcon()
-        icon2.addFile(u"../../Recursos/epytrochoidal_1.PNG", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon2.addFile(u"Recursos/epytrochoidal_1.PNG", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.pushButton_epitrocoidal.setIcon(icon2)
         self.pushButton_epitrocoidal.setIconSize(QSize(230, 230))
 
@@ -94,7 +94,7 @@ class Ui_MainWindow(object):
         self.pushButton_hipotrocoidal.setMinimumSize(QSize(240, 240))
         self.pushButton_hipotrocoidal.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         icon3 = QIcon()
-        icon3.addFile(u"../../Recursos/hypotrochoidal.PNG", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon3.addFile(u"Recursos/hypotrochoidal.PNG", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.pushButton_hipotrocoidal.setIcon(icon3)
         self.pushButton_hipotrocoidal.setIconSize(QSize(230, 230))
 
