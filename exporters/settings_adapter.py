@@ -36,7 +36,13 @@ def renderizar_grafica(plot,ancho:int,alto:int,transparente:bool=False,
     if not (100<=ancho<=16384 and 100<=alto<=16384):
         raise ValueError('Resolución fuera de rango')
     img=QtGui.QImage(ancho,alto,QtGui.QImage.Format.Format_ARGB32_Premultiplied)
-    img.fill(QtCore.Qt.GlobalColor.transparent if transparente else plot.palette().color(QtGui.QPalette.ColorRole.Base))
+    fondo=plot.palette().color(QtGui.QPalette.ColorRole.Base)
+    try:                       # el fondo real de la gráfica (tema) y no el de la paleta: evita bandas de otro color
+        pincel=plot.backgroundBrush()
+        if pincel.style()!=QtCore.Qt.BrushStyle.NoBrush:fondo=pincel.color()
+    except AttributeError:
+        pass
+    img.fill(QtCore.Qt.GlobalColor.transparent if transparente else fondo)
     painter=QtGui.QPainter(img)
     painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing,antialias)
     painter.setRenderHint(QtGui.QPainter.RenderHint.TextAntialiasing,antialias)
@@ -70,10 +76,10 @@ def guardar_imagen(plot,ruta:str,op:Exportacion)->None:
 
 
 def parametros_video(op:Exportacion)->dict:
-    """Parametros compatibles con GrabadorVideo actual (solo H.264)."""
-    if op.formato_video!='MP4 — H.264':
-        raise NotImplementedError('VP9 requiere implementar y probar un escritor WebM')
+    """Parámetros para GrabadorVideo: H.264 (MP4) o VP9 (WebM); yuv420p exige dimensiones pares."""
+    from exporters.video_recorder import es_vp9
     w,h=dimensiones_video(op)
     if (w%2) or (h%2):
-        raise ValueError('H.264 yuv420p requiere dimensiones pares')
-    return {'fps':op.video_fps,'crf':op.video_crf,'ancho':w,'alto':h}
+        raise ValueError('yuv420p requiere dimensiones pares')
+    return {'fps':op.video_fps,'crf':op.video_crf,'ancho':w,'alto':h,'vp9':es_vp9(op.formato_video),
+            'extension':'.webm' if es_vp9(op.formato_video) else '.mp4'}

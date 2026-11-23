@@ -104,6 +104,8 @@ Q2 diálogos: versión `actualizar_modo`/`HABILITACION_POR_MODO` apuntando a los
 | 2026-11-11 | Lote 3: exportaciones completas, logo, etiquetas del planetario (§11). |
 | 2026-11-21 | Lote 4: imágenes de botones/logo, limpieza de duplicados; Ajustes en curso (§12). |
 | 2026-11-22 | Lote 5: Ajustes integrados (tema global, FPS), control de banco archivado en `banco_legacy/` (§13). |
+| 2026-11-22 | Lote 6: Ajustes → General y Exportación funcionales (§14, §15). |
+| 2026-11-22 | Lote 7: Simulación y rendimiento (inválido, pausa, caché) (§16). |
 
 ---
 
@@ -175,3 +177,100 @@ Fuente: `tests/RPS_Ajustes_Claude/` (guía + prompt) con el **`ui/designer/Ajust
   | Migrar tips a la Guía Técnica | Diferido a propósito (solo consignado) |
 - **Tests**: `test_ajustes_contract` / `_sampling` / `_widgets` / `_qt` (Qt offscreen), más `banco_legacy/test_motor_plan`. Suite: 44 pasaron, 2 omitidos. Smoke offscreen: arranque, 3 ventanas (Epi, Trocoidal, Planetario) y cambio de FPS sin errores. **No** se probó con ventana real en Windows ni con GPU.
 - **§13.8 Trazos enormes al cambiar de tema (corregido)**: `ThemeManager.pen` creaba `QPen` no cosmético, así que el ancho se interpretaba en unidades de datos (mm) y, al aplicar un tema con la ventana abierta, el perfil y los rodillos salían gruesísimos (al abrir una ventana nueva no pasaba porque sus items aún no existían cuando se aplicaba el tema). Ahora `pen.setCosmetic(True)` (ancho en píxeles). Test: `test_trazos_en_pixeles_y_no_en_unidades_de_datos`.
+
+---
+
+## 14. Checklist de la ventana Ajustes (actualizado 22-nov-2026, lote 7)
+
+**Resumen:** 31 funcionales · 5 programadas (se guardan, sin efecto) · 1 no programadas · 37 en total.
+
+General, Exportación y Simulación (salvo V-Sync y contacto) quedan completas. Pendiente: Cálculo (🟡), V-Sync y contacto (🟡) y la migración de tips (❌).
+
+### General
+
+| Función | Estado | Detalle / verificación |
+|---|---|---|
+| Guardar preferencias (QSettings) | ✅ Funcional | Lo respeta `SettingsStore.save`; sin test del caso «desactivado» |
+| Restaurar sesión | ✅ Funcional | Al cerrar cada ventana de sistema se guarda su estado (JSON en la carpeta de datos del usuario) y al abrirla se recupera; apagado = no guarda ni restaura. Probado en las 4 ventanas |
+| Confirmar al salir | ✅ Funcional | Ventana de sistema: pregunta Guardar/Descartar/Cancelar solo si hay cambios sin guardar (girar el dial no cuenta). Menú principal: confirma el cierre de la app. Probado |
+| Guardado automático + intervalo | ✅ Funcional | Timer por ventana; si hay cambios escribe una copia de recuperación (no toca tu proyecto). Si la sesión terminó mal, al abrir ofrece recuperarla. Probado |
+| Avisos de datos | ✅ Funcional | Habilita los avisos no críticos: parámetros fuera de rango, exportar/grabar sin geometría o sin modo automático, perfil no disponible. Los errores (p. ej. archivo inválido) siempre salen. Probado |
+| Confirmar sobrescritura | ✅ Funcional | Apagado: los diálogos de guardar no preguntan. Encendido: pregunta también por los archivos derivados (`_sol`, `_anular`). Probado la opción; el diálogo nativo de Windows no |
+
+### Cálculo y precisión
+
+| Función | Estado | Detalle / verificación |
+|---|---|---|
+| Desviación lineal y angular | ✅ Funcional | `ajustes.desviacion` → `export_manager` (exportaciones); probado Aplicar/Cancelar |
+| Habilitar/deshabilitar campos según estrategia | ✅ Funcional | Lógica de la ventana (`_sampling_ui`) |
+| Decimales mostrados | 🟡 Programado | Se guarda; ninguna vista/exportador lo lee |
+| Estrategia de muestreo (uniforme/adaptativa) + nº de muestras | 🟡 Programado | Se guarda; `sampling_preferences` probado pero NO conectado a `contact_engine` |
+| Mostrar estimación de costo | 🟡 Programado | Se guarda; no hay estimador |
+
+### Simulación y rendimiento
+
+| Función | Estado | Detalle / verificación |
+|---|---|---|
+| FPS (monitor / fijo / personalizado / sin límite) | ✅ Funcional | `FrameScheduler` en cada ventana; probado el intervalo del timer y el cambio en caliente |
+| Bajar FPS en ventana inactiva | ✅ Funcional | `FrameScheduler`; sin prueba con ventana real |
+| Renderizado Software / OpenGL | ✅ Funcional | `aplicar_opengl`; sin probar en GPU real |
+| Procesamiento CPU / GPU / Híbrido | ✅ Funcional | `backend_selector` lee `ajustes.modo_hardware` en cada operación: el cambio aplica en el siguiente cálculo, sin reiniciar. GPU (CuPy/CUDA) sin probar |
+| Detener ante estado matemáticamente inválido | ✅ Funcional | Con la simulación en marcha: parámetros inválidos (Epi/Hipo/Trocoidal/Planetario) o un error/ángulo no finito al calcular un fotograma la detienen con aviso; apagado, sigue con la última geometría válida. Probado |
+| Conservar resultados al pausar | ✅ Funcional | Al volver a modo Automático se conserva la línea de tiempo y la posición de pausa si el perfil y el recorrido no cambiaron; apagado, reinicia desde t = 0. Probado |
+| Reutilizar geometría no modificada | ✅ Funcional | Caché de hasta 8 geometrías (clave: parámetros + tolerancias + backend). Parámetros sin cambios ya no recalculan ni redibujan: 10,9 → 0,9 ms (Epitrocoidal) y 13,8 → 0,4 ms (Trocoidal) por recálculo. Probado en Epi y Planetario |
+| V-Sync | 🟡 Programado | Se guarda como «solicitado»; no se aplica ni se afirma activo: un QTimer no sincroniza y el intercambio de buffers no se puede verificar sin GPU real (lo pide así tu guía) |
+| Simulación basada en contacto | 🟡 Programado | Se guarda; el solver de contacto no existe y la guía prohíbe sustituir el cálculo cinemático. Requiere diseñarlo (colisiones, estabilidad, tiempo) |
+
+### Apariencia y estilos
+
+| Función | Estado | Detalle / verificación |
+|---|---|---|
+| Selección de tema/preset | ✅ Funcional | `ThemeManager.apply`: paleta, hoja de estilo, gráficas; probado |
+| Colores UI (árbol + selector) | ✅ Funcional | Se aplican a la paleta global; edición manual sin test |
+| Colores técnicos | ✅ Funcional | Perfil, piñón, rodillos, camino, etc., también en gráficas nuevas |
+| Trazos (tipo, ancho, extremo, unión) | ✅ Funcional | Corregido el ancho (§13.8); confirmado por ti |
+| Tipografía UI y de gráficas | ✅ Funcional | Fuente/tamaño/negrita en app y ejes; sin test |
+| Antialias | ✅ Funcional | Opción global de pyqtgraph |
+| Guardar / Duplicar / Restaurar preset | ✅ Funcional | Código completo; sin tests de estas tres acciones |
+
+### Exportación
+
+| Función | Estado | Detalle / verificación |
+|---|---|---|
+| Imagen: formato por defecto, resolución, ancho/alto, calidad JPEG, fondo transparente, antialias | ✅ Funcional | `image_exporter` → `settings_adapter.guardar_imagen` (PNG/JPEG); el ancho también rige SVG/PDF. Probado tamaño exacto, calidad y alfa. Transparencia solo en PNG |
+| Video: formato (MP4 H.264 / WebM VP9) | ✅ Funcional | `GrabadorVideo` con libx264 o libvpx-vp9; ya sin «(por implementar)». Probado ambos |
+| Video: resolución, FPS y calidad (CRF) | ✅ Funcional | Campos creados en código dentro de las filas de tu `.ui` (que solo tenía las etiquetas); si los añades en Designer con esos nombres se usan esos. Probado grabación 320×180 a 24 FPS y lectura de metadatos |
+| Video: «Renderizar fotogramas según el tiempo simulado» | ✅ Funcional | Activado: cada fotograma se renderiza a la resolución elegida. Desactivado: captura rápida de la vista tal como se ve (resolución de la ventana) |
+
+### Ventana y persistencia
+
+| Función | Estado | Detalle / verificación |
+|---|---|---|
+| Aplicar / Aceptar / Cancelar | ✅ Funcional | Probado: Cancelar no persiste, Aplicar sí |
+| Restaurar predeterminados (solo formulario) | ✅ Funcional | Confirmación previa; sin test |
+| Persistencia en QSettings | ✅ Funcional | Probado ida y vuelta |
+| Fallback si las preferencias están corruptas | ✅ Funcional | `runtime.iniciar`; sin test |
+| Aplicación en caliente a ventanas abiertas | ✅ Funcional | Tema y FPS (probado; ver §13.8) |
+| Ayuda/tips migrados a la Guía Técnica | ❌ No programado | Diferido a propósito |
+
+---
+
+## 15. Lote 6 · General y Exportación (22-nov-2026)
+
+- **§15.1 Sesión y proyecto**: `VentanaSistemaBase` reutiliza el JSON de proyecto (`file_handler.serializar`) para: guardar/abrir (`_aplicar_proyecto`), sesión por sistema (`ui/sesion.py`: `sesion/<SISTEMA>.json`), autoguardado (`autoguardado/<SISTEMA>.json`) y detección de cambios (`_huella_cambios`, sin contar `valor_manual`). Carpeta: datos del usuario (`GenericDataLocation/RPS Design`; en tests `RPS_DATA_DIR`).
+- **§15.2 Cambio de comportamiento a tener presente**: con «Restaurar sesión» activo (valor por defecto) cada ventana se abre con los últimos parámetros, modo, perfil y capas usados, no con los predeterminados. Se desactiva en Ajustes → General.
+- **§15.3 Grabación**: `_grabar` usa formato, resolución, FPS y CRF de Ajustes. Con «según el tiempo simulado» activo cada fotograma se renderiza (`settings_adapter.renderizar_grafica`) a la resolución elegida con el fondo real de la gráfica; desactivado, `sim.fotograma()` (captura rápida).
+- **§15.4 Imágenes**: `exportar_grafica` ya lee Ajustes (antes: 1920 px fijo); el diálogo propone el formato por defecto.
+- **§15.5 Modelo**: `formato_video` acepta «WebM — VP9» (y el texto antiguo con «(por implementar)»).
+- **Tests**: `test_ajustes_general_export.py` (15). Suite: 60 pasaron, 2 omitidos.
+- **No verificado**: diálogos nativos de Windows (sobrescritura), rendimiento de 4K en tu equipo, VP9 con el ffmpeg de tu instalación (aquí funcionó el de imageio-ffmpeg).
+
+---
+
+## 16. Lote 7 · Simulación y rendimiento (22-nov-2026)
+
+- **§16.1 Detener ante inválido**: `_invalido()` (base y Planetario) sustituye los avisos de parámetros inválidos; con la reproducción activa y la preferencia encendida pausa y avisa. `_emitir_estado` pausa si el cálculo de un fotograma falla (antes `manejador_seguro` lo tragaba y seguía fallando a cada tick) y `_mostrar_auto` rechaza ángulos no finitos.
+- **§16.2 Conservar resultados al pausar**: `_aplicar_modo` reutiliza la `LineaTiempo` y `_t` si la clave (perfil de movimiento + preset + recorrido permitido) no cambió; `_reconstruir_auto` actualiza esa clave.
+- **§16.3 Caché de geometría**: `_geometria()` (LRU de 8). Clave: tipo de parámetros + valores + desviaciones lineal/angular + `modo_hardware`. Si la geometría ya está dibujada se omiten `set_geometria`/`set_curva_base`. Planetario usa el mismo mecanismo.
+- **§16.4 No implementados a propósito**: V-Sync (no verificable sin GPU; la guía exige no afirmarlo) y simulación por contacto (no existe el solver).
+- **Tests**: `test_simulacion_rendimiento.py` (11). Suite: 71 pasaron, 2 omitidos.

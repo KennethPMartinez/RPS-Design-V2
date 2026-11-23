@@ -6,10 +6,11 @@ Arranque (main.py):  runtime.iniciar(app)  →  configurar pyqtgraph / aplicar_t
 Ventanas:            runtime.cambiado (Signal[SettingsState]) avisa tras Aplicar/Aceptar; runtime.abrir_dialogo(parent).
 Plots nuevos:        widgets.pg_helpers.configurar_menu_plot llama runtime.tema_a_plot(plot).
 
-Qué se aplica de verdad hoy: tema/paleta/fuentes/estilos de trazo (ThemeManager), OpenGL, backend CPU/GPU/Híbrido
-(ajustes.modo_hardware), desviaciones, cadencia visual (FrameScheduler). Se PERSISTEN pero aún no actúan: V-Sync,
-simulación por contacto, detener ante inválido, conservar pausa, caché de geometría, guardado automático,
-restaurar sesión, confirmar salida y muestreo adaptativo (ver progress.md §13).
+Qué se aplica de verdad: tema/paleta/fuentes/trazos (ThemeManager), OpenGL, backend CPU/GPU/Híbrido
+(ajustes.modo_hardware), desviaciones, cadencia visual (FrameScheduler), pestañas General (sesión, confirmar salida,
+autoguardado, avisos, sobrescritura) y Exportación (imagen y video). Se PERSISTEN pero aún no actúan: V-Sync,
+simulación por contacto, detener ante inválido, conservar pausa, caché de geometría, decimales, estrategia de
+muestreo y estimación de costo (ver progress.md §14).
 """
 from __future__ import annotations
 
@@ -78,6 +79,12 @@ class AjustesRuntime(QtCore.QObject):
                 self.theme.apply_to_plot(plot)
             except RuntimeError:
                 pass
+
+    def opciones_guardado(self) -> QtWidgets.QFileDialog.Option:
+        """«Confirmar sobrescritura»: con la preferencia apagada, los diálogos de guardar no preguntan."""
+        if self.estado.general.confirmar_sobrescritura:
+            return QtWidgets.QFileDialog.Option(0)
+        return QtWidgets.QFileDialog.Option.DontConfirmOverwrite
 
     def abrir_dialogo(self, parent: QtWidgets.QWidget | None = None) -> int:
         from ui.settings_window import SettingsWindow

@@ -57,3 +57,13 @@ class MenuPrincipal(QtWidgets.QMainWindow):
     def mostrar_de_nuevo(self):
         self.ventana_activa = None
         self.show()
+
+    def closeEvent(self, e):
+        """«Confirmar al salir»: cerrar el menú principal cierra la aplicación."""
+        from ui.ajustes_runtime import runtime
+        if runtime.estado.general.confirmar_salir and self.ventana_activa is None:
+            B = QtWidgets.QMessageBox.StandardButton
+            if QtWidgets.QMessageBox.question(self, "Salir", "¿Quieres cerrar RPS Design?", B.Yes | B.No, B.No) != B.Yes:
+                e.ignore()
+                return
+        super().closeEvent(e)

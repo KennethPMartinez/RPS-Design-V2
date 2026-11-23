@@ -21,16 +21,22 @@ FILTROS = ("Imagen PNG (*.png);;Imagen JPG (*.jpg);;Vectorial SVG (*.svg);;"
            "Documento PDF (*.pdf);;Datos CSV (*.csv)")
 
 
-def exportar_grafica(plot_widget, ruta: str, ancho: int = 1920) -> None:
+def exportar_grafica(plot_widget, ruta: str, ancho: int | None = None, op=None) -> None:
+    """Exporta con lo elegido en Ajustes → Exportación (`op`): resolución, calidad JPEG, fondo transparente y
+    antialias para PNG/JPEG; el ancho para SVG/PDF. `ancho` explícito (p. ej. en pruebas) prevalece sobre Ajustes."""
+    from exporters import settings_adapter as ad
+    if op is None:
+        from ui.ajustes_runtime import runtime
+        op = runtime.estado.exportacion
     item = plot_widget.getPlotItem()
     if getattr(plot_widget, "_inspector", None) is not None:
         plot_widget._inspector._ocultar()      # el cursor de inspección no debe salir en la imagen
     ext = Path(ruta).suffix.lower()
+    tam = plot_widget.size()
+    if ancho is None:
+        ancho = ad.dimensiones_imagen(op, (tam.width(), tam.height()))[0]
     if ext in (".png", ".jpg", ".jpeg"):
-        exp = ImageExporter(item)
-        exp.parameters()["width"] = int(ancho)
-        exp.parameters()["antialias"] = True
-        exp.export(ruta)
+        ad.guardar_imagen(plot_widget, ruta, op)
     elif ext == ".svg":
         try:
             SVGExporter(item).export(ruta)
@@ -41,6 +47,7 @@ def exportar_grafica(plot_widget, ruta: str, ancho: int = 1920) -> None:
     elif ext == ".pdf":
         exp = ImageExporter(item)
         exp.parameters()["width"] = int(ancho)
+        exp.parameters()["antialias"] = bool(op.antialias_export)
         img = exp.export(toBytes=True)
         w = QtGui.QPdfWriter(ruta)
         w.setPageSize(QtGui.QPageSize(QtGui.QPageSize.PageSizeId.A4))
@@ -70,16 +77,24 @@ def _svg_qt(item, ruta: str, ancho: int) -> None:
     p.end()
 
 
+_POR_FORMATO = {"PNG": ("Imagen PNG (*.png)", ".png"), "JPEG": ("Imagen JPG (*.jpg)", ".jpg"),
+                "SVG": ("Vectorial SVG (*.svg)", ".svg"), "PDF": ("Documento PDF (*.pdf)", ".pdf")}
+
+
 def exportar_con_dialogo(plot_widget, parent, nombre_base: str = "grafica") -> None:
+    from ui.ajustes_runtime import runtime
+    op = runtime.estado.exportacion
+    filtro_defecto, ext_defecto = _POR_FORMATO.get(op.formato_imagen, _POR_FORMATO["PNG"])
     nombre = nombre_base.lower().replace(" ", "_")
-    ruta, filtro = QtWidgets.QFileDialog.getSaveFileName(parent, "Exportar gráfica", f"{nombre}.png", FILTROS)
+    ruta, filtro = QtWidgets.QFileDialog.getSaveFileName(parent, "Exportar gráfica", f"{nombre}{ext_defecto}", FILTROS,
+                                                         filtro_defecto, runtime.opciones_guardado())
     if not ruta:
         return
     if not Path(ruta).suffix:
         ruta += {"PNG": ".png", "JPG": ".jpg", "SVG": ".svg", "PDF": ".pdf", "CSV": ".csv"}.get(
             next((k for k in ("PNG", "JPG", "SVG", "PDF", "CSV") if k in filtro), "PNG"), ".png")
     try:
-        exportar_grafica(plot_widget, ruta)
+        exportar_grafica(plot_widget, ruta, op=op)
     except Exception as e:
         QtWidgets.QMessageBox.warning(parent, "Exportar gráfica", f"No se pudo exportar:\n{e}")
         return

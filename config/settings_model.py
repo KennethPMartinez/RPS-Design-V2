@@ -242,7 +242,7 @@ class SettingsState:
             raise ValueError('Dimensiones de exportación fuera de rango')
         if not (1<=e.jpeg_calidad<=100 and 0<=e.video_crf<=51 and e.video_fps in (24,30,60,120)):
             raise ValueError('Calidad o FPS de exportación inválidos')
-        if e.formato_video not in ('MP4 — H.264','WebM — VP9 (por implementar)'):
+        if e.formato_video not in ('MP4 — H.264','WebM — VP9','WebM — VP9 (por implementar)'):
             raise ValueError('Formato de video no reconocido')
         if not 1<=self.general.intervalo_guardado_min<=120:
             raise ValueError('Intervalo de guardado no válido')

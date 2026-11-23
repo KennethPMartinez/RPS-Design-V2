@@ -24,8 +24,8 @@ ALIAS_WIDGETS = {
     'btnRestaurar': 'pushButton', 'chkRestaurarSesion': 'checkBox', 'chkConfirmarSalir': 'checkBox_2',
     'chkSimulacionPorContacto': 'checkBox_3',
 }
-# Campos de video que el .ui del repo aún no tiene (solo existen sus etiquetas): se omiten sin romper y conservan el
-# valor guardado. Para activarlos, añadirlos en Designer con estos nombres.
+# Campos de video que el .ui del repo no trae (solo sus etiquetas): `_completar_campos_video` los CREA en código dentro
+# de las filas existentes. Si algún día se añaden en Designer con estos nombres, se usan tal cual.
 OPCIONALES = ('comboResolucionVideo', 'comboFPSVideo', 'spinCRFVideo')
 
 
@@ -51,6 +51,7 @@ class SettingsWindow(QtCore.QObject):
         self._styles=deepcopy(self.state.apariencia.estilos_lineas)
         self._curva_actual=None
         self._guardando=False
+        self._completar_campos_video()
         self._setup()
         combo=self.w('comboTema',QtWidgets.QComboBox)
         for name in self.store.custom_themes():
@@ -65,6 +66,36 @@ class SettingsWindow(QtCore.QObject):
         if result is None and name not in OPCIONALES:
             raise RuntimeError('Falta widget en Ajustes.ui: '+name)
         return result
+
+    def _completar_campos_video(self):
+        """Resolución, FPS y calidad del video: las filas del .ui solo tienen la etiqueta. Se añade el campo a cada fila
+        (QHBoxLayout `<nombre>Row`) sin modificar el .ui. También se quita «(por implementar)» del combo VP9."""
+        from exporters.settings_adapter import RESOLUCIONES
+        filas={'comboResolucionVideo':lambda:self._combo_video(list(RESOLUCIONES)+['Personalizada']),
+               'comboFPSVideo':lambda:self._combo_video(['24 FPS','30 FPS','60 FPS']),
+               'spinCRFVideo':self._spin_crf}
+        for nombre,fabrica in filas.items():
+            if self.dialog.findChild(QtWidgets.QWidget,nombre) is not None:
+                continue
+            fila=self.dialog.findChild(QtWidgets.QHBoxLayout,nombre+'Row')
+            if fila is None and nombre=='spinCRFVideo':
+                fila=self.dialog.findChild(QtWidgets.QHBoxLayout,'comboCRFVideoRow')
+            if fila is None:
+                continue
+            campo=fabrica();campo.setObjectName(nombre);fila.addWidget(campo,1)
+        combo=self.dialog.findChild(QtWidgets.QComboBox,'comboFormatoVideo')
+        if combo is not None:
+            for i in range(combo.count()):
+                if 'por implementar' in combo.itemText(i):
+                    combo.setItemText(i,combo.itemText(i).replace(' (por implementar)',''))
+
+    def _combo_video(self,items):
+        c=QtWidgets.QComboBox();c.addItems(items);return c
+
+    def _spin_crf(self):
+        sp=QtWidgets.QSpinBox();sp.setRange(0,51)
+        sp.setToolTip('CRF: menor = más calidad y más peso (H.264 ≈ 18–28; VP9 ≈ 25–35).')
+        return sp
 
     def tiene(self,name):
         return self.w(name) is not None

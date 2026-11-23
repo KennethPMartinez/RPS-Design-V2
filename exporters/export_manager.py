@@ -61,12 +61,23 @@ def exportar(ruta, items, sistema: str, html_extra: str = "", n_puntos: int = PU
 
 def exportar_con_dialogo(ventana, items, sistema: str, archivo_defecto: str, html_extra: str = "") -> None:
     from PySide6 import QtCore, QtWidgets
-    ruta, filtro = QtWidgets.QFileDialog.getSaveFileName(ventana, "Exportar", archivo_defecto, FILTROS)
+    from ui.ajustes_runtime import runtime
+    ruta, filtro = QtWidgets.QFileDialog.getSaveFileName(ventana, "Exportar", archivo_defecto, FILTROS,
+                                                         options=runtime.opciones_guardado())
     if not ruta:
         return
     if not Path(ruta).suffix:                                # sin extensión: la del filtro elegido
         m = re.search(r"\(\*(\.\w+)\)", filtro)
         ruta += m.group(1) if m else ".xlsx"
+    if runtime.estado.general.confirmar_sobrescritura:        # el diálogo nativo solo conoce `ruta`; aquí los derivados
+        r = Path(ruta)
+        extra = [] if r.suffix.lower() == ".pdf" or len(items) == 1 else \
+            [r.with_name(f"{r.stem}_{et.lower()}{r.suffix}") for et, _m, _p in items]
+        existentes = [x.name for x in extra if x.exists()]
+        if existentes and QtWidgets.QMessageBox.question(
+                ventana, "Sobrescribir", "Ya existen:\n" + "\n".join(existentes) + "\n\n¿Quieres reemplazarlos?"
+        ) != QtWidgets.QMessageBox.StandardButton.Yes:
+            return
     QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.WaitCursor)
     try:
         salidas = exportar(ruta, items, sistema, html_extra)

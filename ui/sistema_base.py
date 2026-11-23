@@ -20,6 +20,10 @@ El perfil de la línea de tiempo es SIEMPRE el ángulo del piñón (°); en Troc
 from __future__ import annotations
 
 import copy
+from collections import OrderedDict
+from dataclasses import asdict
+from pathlib import Path
+import json
 import time
 
 import numpy as np
@@ -35,6 +39,7 @@ from exporters.video_recorder import GrabadorVideo
 from ui.errores import manejador_seguro
 from ui.property_windows import VentanaPerfilDiente, VentanaPropiedad
 from simulation.frame_scheduler import FrameScheduler
+from ui import sesion
 from ui.ajustes_runtime import runtime
 from ui.velocity_profile_window import VentanaPerfilVelocidad
 from utils import file_handler
@@ -92,9 +97,17 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
         sim = runtime.estado.simulacion         # cadencia visual (FPS) desde Ajustes; el tiempo sigue siendo perf_counter
         self._scheduler = FrameScheduler(self, self._anim, sim.fps, sim.fps_personalizado, sim.bajar_fps_inactivo)
         runtime.cambiado.connect(self._ajustes_cambiaron)
+        self._cache_geo = OrderedDict()         # «Reutilizar geometría no modificada» (hasta 8 geometrías)
+        self._clave_pintada = None              # geometría que la vista ya dibuja
+        self._clave_lt = None                   # línea de tiempo vigente (para «Conservar resultados al pausar»)
         self._conectar()
         self._aplicar_modo()
         self._recalcular()
+        self._huella_limpia = ""
+        self._t_auto = QtCore.QTimer(self)
+        self._t_auto.timeout.connect(self._autoguardar)
+        self._configurar_autoguardado()
+        self._restaurar_sesion()                # autoguardado pendiente o última sesión (según Ajustes → General)
 
     # ------------------------------------------------------------------ ganchos (cada sistema)
     def _preparar_ui(self):
@@ -190,18 +203,53 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
             sp.blockSignals(True); sp.setValue(getattr(p, campo)); sp.blockSignals(False)
 
     @manejador_seguro
+    def _clave_geometria(self, p) -> str:
+        """Todo lo que determina la geometría calculada: parámetros + tolerancias + backend de cálculo."""
+        d = ajustes.desviacion
+        return repr((type(p).__name__, sorted(asdict(p).items()), d.desviacion_lineal_mm,
+                     d.desviacion_angular_grados, ajustes.modo_hardware))
+
+    def _geometria(self, p, fabrica):
+        """(valor, clave, reutilizado). «Reutilizar geometría no modificada»: parámetros ya calculados no se recalculan."""
+        clave = self._clave_geometria(p)
+        if not runtime.estado.simulacion.cache_geometria:
+            self._cache_geo.clear()
+            return fabrica(), clave, False
+        if clave in self._cache_geo:
+            self._cache_geo.move_to_end(clave)
+            return self._cache_geo[clave], clave, True
+        valor = fabrica()
+        self._cache_geo[clave] = valor
+        while len(self._cache_geo) > 8:
+            self._cache_geo.popitem(last=False)
+        return valor, clave, False
+
+    def _invalido(self, texto: str, ms: int = 4000) -> None:
+        """Estado no calculable: aviso y, si Ajustes lo pide, se detiene la reproducción en curso."""
+        if self._anim.isActive() and runtime.estado.simulacion.detener_invalido:
+            self._pausar()
+            self.statusBar().showMessage("Simulación detenida: " + texto, max(ms, 6000))
+        else:
+            self._aviso(texto, ms)
+
     def _recalcular(self, *_):
         p = self.leer_parametros()
         if not p.es_valido():
-            self.statusBar().showMessage("Parámetros fuera de rango: la geometría no se recalcula.", 4000)
+            self._invalido("Parámetros fuera de rango: la geometría no se recalcula.")
             return
-        motor = self.CLASE_MOTOR(p)
-        res = motor.generar_patron()          # incluye el análisis del perfil (1 sola pasada)
+
+        def fabricar():
+            m = self.CLASE_MOTOR(p)
+            return m, m.generar_patron()      # incluye el análisis del perfil (1 sola pasada)
+
+        (motor, res), clave, reutilizado = self._geometria(p, fabricar)
         self.motor_actual, self.perfil_actual = motor, res
         self._solver = SolverCinematico(motor.contexto)
         self._actualizar_rango_control(p)
-        self.sim.set_geometria(res)
-        self.sim.set_curva_base(*self._curva_base(motor))
+        if not (reutilizado and clave == self._clave_pintada):      # la vista ya dibuja exactamente esta geometría
+            self.sim.set_geometria(res)
+            self.sim.set_curva_base(*self._curva_base(motor))
+        self._clave_pintada = clave
         self.perfilActualizado.emit(res)
         self._emitir_estado()
         if self._es_auto() and self._rango_angulo_auto() is not None:    # L / prrp cambiaron: reencajar
@@ -240,9 +288,15 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
     def _emitir_estado(self, *_):
         if self.motor_actual is None:
             return
-        ang = self._angulo_motor()
-        self._refrescar_indicadores(ang)
-        self.sim.actualizar(*self._estado_para(ang))
+        try:
+            ang = self._angulo_motor()
+            self._refrescar_indicadores(ang)
+            self.sim.actualizar(*self._estado_para(ang))
+        except Exception:
+            if self._anim.isActive() and runtime.estado.simulacion.detener_invalido:
+                self._pausar()          # estado matemáticamente inválido: no seguir calculando a cada tick
+                self.statusBar().showMessage("Simulación detenida: el estado calculado no es válido.", 6000)
+            raise                       # `manejador_seguro` lo registra
 
     # ------------------------------------------------------------------ Manual / Automático
     @manejador_seguro
@@ -251,8 +305,12 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
         u = self.ui
         self._pausar()
         if auto:
-            self._construir_linea_tiempo()
-            self._t = self.linea_tiempo.t_ini if self.linea_tiempo else 0.0
+            clave = self._clave_linea()
+            if not (runtime.estado.simulacion.conservar_pausa and self.linea_tiempo is not None
+                    and clave == self._clave_lt):       # «Conservar resultados al pausar»: misma línea => misma posición
+                self._construir_linea_tiempo()
+                self._t = self.linea_tiempo.t_ini if self.linea_tiempo else 0.0
+                self._clave_lt = clave
         elif self.linea_tiempo is not None:
             self.control.reiniciar(self._valor_desde_angulo(self.linea_tiempo.posicion_en(self._t)))
         for w in self._widgets_control_manual():
@@ -288,9 +346,15 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
             self.perfil_mov = copy.deepcopy(self.perfil_mov_defecto)
             self._reconstruir_auto()
 
+    def _clave_linea(self) -> str:
+        """Qué define la línea de tiempo: perfil de movimiento, si es el preset y el recorrido permitido."""
+        return json.dumps([self._proyecto_dict()["perfil_movimiento"], self._rango_angulo_auto(),
+                           self.ui.checkBox_valpredeterminados.isChecked()], sort_keys=True, default=str)
+
     def _reconstruir_auto(self):
         self._pausar()
         self._construir_linea_tiempo()
+        self._clave_lt = self._clave_linea()
         self._t = self.linea_tiempo.t_ini if self.linea_tiempo else 0.0
         self._mostrar_auto()
 
@@ -328,6 +392,7 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
         """Tras Aplicar/Aceptar en Ajustes: nueva cadencia visual (no altera el tiempo simulado)."""
         sim = estado.simulacion
         self._scheduler.set_preferences(sim.fps, sim.fps_personalizado, sim.bajar_fps_inactivo)
+        self._configurar_autoguardado()
 
     def _reiniciar(self):
         self._pausar()
@@ -343,12 +408,19 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
         if self._t >= self.linea_tiempo.t_fin:
             self._t = self.linea_tiempo.t_fin
             self._pausar()
-        self._mostrar_auto()
+        try:
+            self._mostrar_auto()
+        except Exception:
+            if runtime.estado.simulacion.detener_invalido:     # no seguir intentando a cada tick con un estado roto
+                self._pausar()
+            raise
 
     def _mostrar_auto(self):
         if self.linea_tiempo is None:
             return
         ang = self.linea_tiempo.posicion_en(self._t)
+        if not np.isfinite(ang):
+            raise ArithmeticError("el ángulo del motor no es finito (perfil de movimiento inválido)")
         self.control.mostrar(self._valor_desde_angulo(ang))
         self._emitir_estado()
         ahora = time.perf_counter()
@@ -365,24 +437,38 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
             self._emitir_estado()
         self.sim.resetear_camara()
 
-    # -- grabación ------------------------------------------------------
+    # -- grabación (formato, resolución, FPS y calidad vienen de Ajustes → Exportación) -----------------
     @manejador_seguro
     def _grabar(self, *_):
         lt = self.linea_tiempo
         if not self._es_auto() or lt is None or self.motor_actual is None:
+            self._aviso_modal("Grabar video", "La grabación requiere el modo Automático con una línea de tiempo válida.")
             return
-        ruta, _f = QtWidgets.QFileDialog.getSaveFileName(self, "Guardar video de la simulación",
-                                                         "simulacion.mp4", "Video MP4 (*.mp4)")
+        from exporters import settings_adapter as ad
+        op = runtime.estado.exportacion
+        try:
+            pv = ad.parametros_video(op)
+        except ValueError as e:
+            QtWidgets.QMessageBox.warning(self, "Grabar video", f"Configuración de video no válida:\n{e}")
+            return
+        ext = pv["extension"]
+        filtro = "Video WebM (*.webm)" if pv["vp9"] else "Video MP4 (*.mp4)"
+        ruta, _f = QtWidgets.QFileDialog.getSaveFileName(self, "Guardar video de la simulación", "simulacion" + ext,
+                                                         filtro, options=runtime.opciones_guardado())
         if not ruta:
             return
+        if not Path(ruta).suffix:
+            ruta += ext
         self._pausar()
         t_prev = self._t
-        n = int(lt.duracion * FPS_VIDEO) + 1
-        angulos = lt.posiciones_en(lt.t_ini + np.arange(n) / FPS_VIDEO)     # vectorizado (xp según hardware)
+        fps = pv["fps"]
+        n = int(lt.duracion * fps) + 1
+        angulos = lt.posiciones_en(lt.t_ini + np.arange(n) / fps)           # vectorizado (xp según hardware)
         prog = QtWidgets.QProgressDialog("Grabando video…", "Cancelar", 0, n, self)
         prog.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
         prog.setMinimumDuration(0)
-        grab = GrabadorVideo(ruta, FPS_VIDEO)
+        grab = GrabadorVideo(ruta, fps, pv["crf"], pv["vp9"])
+        exacto = op.video_determinista          # True: cada fotograma se renderiza a la resolución elegida
         cancelado = False
         self.sim.lbl_fps.hide()
         gl = ajustes.render_opengl
@@ -394,7 +480,9 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
                     cancelado = True
                     break
                 self.sim.actualizar(*self._estado_para(float(angulos[k])))
-                grab.agregar(self.sim.fotograma())
+                img = (ad.renderizar_grafica(self.sim, pv["ancho"], pv["alto"], False, op.antialias_export)
+                       if exacto else self.sim.fotograma())                     # False: captura rápida de la vista
+                grab.agregar(img)
                 prog.setValue(k + 1)
         finally:
             grab.cerrar()
@@ -418,16 +506,26 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
                 "valor_manual": self.control.acumulado,      # θ (°) en angular · X (mm) en lineal
                 "predeterminado": self.ui.checkBox_valpredeterminados.isChecked()}
 
+    def _proyecto_dict(self) -> dict:
+        pm = None if self.ui.checkBox_valpredeterminados.isChecked() else self.perfil_mov
+        return file_handler.serializar(self.SISTEMA, self.leer_parametros(), self._sim_dict(), pm, self.vis)
+
+    def _guardar_en(self, ruta) -> None:
+        pm = None if self.ui.checkBox_valpredeterminados.isChecked() else self.perfil_mov
+        file_handler.guardar_proyecto(ruta, self.SISTEMA, self.leer_parametros(), self._sim_dict(), pm, self.vis)
+
     @manejador_seguro
     def _guardar(self, *_):
         ruta = self._ruta
         if not ruta:
-            ruta, _f = QtWidgets.QFileDialog.getSaveFileName(self, "Guardar proyecto", "proyecto.json", "Proyecto RPS (*.json)")
+            ruta, _f = QtWidgets.QFileDialog.getSaveFileName(self, "Guardar proyecto", "proyecto.json",
+                                                             "Proyecto RPS (*.json)", options=runtime.opciones_guardado())
         if not ruta:
             return
-        pm = None if self.ui.checkBox_valpredeterminados.isChecked() else self.perfil_mov
-        file_handler.guardar_proyecto(ruta, self.SISTEMA, self.leer_parametros(), self._sim_dict(), pm, self.vis)
+        self._guardar_en(ruta)
         self._ruta = ruta
+        self._marcar_limpio()
+        sesion.borrar(sesion.ruta_autoguardado(self.SISTEMA))
         self.statusBar().showMessage(f"Proyecto guardado: {ruta}", 5000)
 
     @manejador_seguro
@@ -440,6 +538,13 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
         except file_handler.ArchivoInvalido as e:
             QtWidgets.QMessageBox.warning(self, "Abrir proyecto", str(e))
             return
+        self._aplicar_proyecto(d)
+        self._ruta = ruta
+        self._marcar_limpio()
+        self.statusBar().showMessage(f"Proyecto abierto: {ruta}", 5000)
+
+    def _aplicar_proyecto(self, d: dict) -> None:
+        """Vuelca un proyecto ya validado (`file_handler.abrir_proyecto`) en la ventana."""
         self._pausar()
         self._escribir_parametros(d["parametros"])
         s = d["simulacion"]
@@ -457,12 +562,103 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
         self._recalcular()                      # antes que el control: en lineal fija el rango de X
         self.control.reiniciar(float(s.get("valor_manual", s.get("angulo_manual", 0.0))))
         self._aplicar_modo()
-        self._ruta = ruta
-        self.statusBar().showMessage(f"Proyecto abierto: {ruta}", 5000)
+
+    # -- sesión, autoguardado y cambios sin guardar (Ajustes → General) -----------------------------------
+    def _huella_cambios(self) -> str:
+        d = self._proyecto_dict()
+        d["simulacion"].pop("valor_manual", None)       # girar el dial no cuenta como «trabajo sin guardar»
+        return json.dumps(d, sort_keys=True, default=str)
+
+    def _marcar_limpio(self) -> None:
+        self._huella_limpia = self._huella_cambios()
+
+    def _hay_cambios(self) -> bool:
+        return self._huella_cambios() != self._huella_limpia
+
+    def _restaurar_sesion(self) -> None:
+        d, recuperado = None, False
+        auto = sesion.ruta_autoguardado(self.SISTEMA)
+        if auto.exists():                       # la sesión anterior no se cerró bien
+            r = QtWidgets.QMessageBox.question(
+                self, "Recuperar autoguardado",
+                f"Se encontró un autoguardado de {self.NOMBRE} de una sesión que no se cerró correctamente.\n"
+                "¿Quieres recuperarlo?")
+            if r == QtWidgets.QMessageBox.StandardButton.Yes:
+                d, recuperado = self._leer_proyecto_tolerante(auto), True
+            sesion.borrar(auto)
+        if d is None and runtime.estado.general.restaurar_sesion:
+            d = self._leer_proyecto_tolerante(sesion.ruta_sesion(self.SISTEMA))
+        if d is not None:
+            try:
+                self._aplicar_proyecto(d)
+            except Exception as e:              # sesión incompatible: se ignora y se arranca con valores por defecto
+                print(f"[sesión] no se pudo restaurar: {e}")
+        self._huella_limpia = "" if recuperado else self._huella_cambios()
+
+    def _leer_proyecto_tolerante(self, ruta):
+        if not ruta.exists():
+            return None
+        try:
+            return file_handler.abrir_proyecto(ruta, self.SISTEMA)
+        except file_handler.ArchivoInvalido as e:
+            print(f"[sesión] {ruta.name} ignorado: {e}")
+            return None
+
+    def _configurar_autoguardado(self) -> None:
+        g = runtime.estado.general
+        if g.guardado_automatico:
+            self._t_auto.start(max(1, int(g.intervalo_guardado_min)) * 60_000)
+        else:
+            self._t_auto.stop()
+
+    def _autoguardar(self) -> None:
+        if self.motor_actual is None or not self._hay_cambios():
+            return
+        try:
+            self._guardar_en(sesion.preparar(sesion.ruta_autoguardado(self.SISTEMA)))
+        except Exception as e:
+            print(f"[autoguardado] falló: {e}")
+            return
+        self.statusBar().showMessage(f"Autoguardado a las {time.strftime('%H:%M')}", 4000)
+
+    def _guardar_sesion(self) -> None:
+        ruta = sesion.ruta_sesion(self.SISTEMA)
+        if not runtime.estado.general.restaurar_sesion:
+            sesion.borrar(ruta)
+            return
+        try:
+            self._guardar_en(sesion.preparar(ruta))
+        except Exception as e:
+            print(f"[sesión] no se pudo guardar: {e}")
+
+    def _confirmar_cierre(self) -> bool:
+        """«Confirmar al salir»: solo pregunta si hay cambios sin guardar."""
+        if not runtime.estado.general.confirmar_salir or not self._hay_cambios():
+            return True
+        B = QtWidgets.QMessageBox.StandardButton
+        r = QtWidgets.QMessageBox.question(self, "Cambios sin guardar",
+                                           "Hay cambios sin guardar en el proyecto. ¿Quieres guardarlos antes de salir?",
+                                           B.Save | B.Discard | B.Cancel, B.Save)
+        if r == B.Cancel:
+            return False
+        if r == B.Save:
+            self._guardar()
+            return not self._hay_cambios()      # si cancelaste el diálogo de guardado, no se sale
+        return True
+
+    # -- avisos (Ajustes → General → Avisos de datos) ------------------------------------------------------
+    def _aviso(self, texto: str, ms: int = 4000) -> None:
+        if runtime.estado.general.avisos_datos:
+            self.statusBar().showMessage(texto, ms)
+
+    def _aviso_modal(self, titulo: str, texto: str) -> None:
+        if runtime.estado.general.avisos_datos:
+            QtWidgets.QMessageBox.information(self, titulo, texto)
 
     @manejador_seguro
     def _exportar(self, *_):
         if self.motor_actual is None:
+            self._aviso_modal("Exportar", "No hay una geometría válida para exportar: revisa los parámetros.")
             return
         from exporters.export_manager import exportar_con_dialogo
         exportar_con_dialogo(self, self._items_exportacion(), self.NOMBRE, self.ARCHIVO_EXCEL,
@@ -485,7 +681,7 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
     @manejador_seguro
     def _abrir_aux(self, fabrica):
         if self.perfil_actual is None:
-            self.statusBar().showMessage("Aún no hay un perfil válido para mostrar.", 4000)
+            self._aviso("Aún no hay un perfil válido para mostrar.")
             return
         w = fabrica()
         self._aux.append(w)
@@ -505,7 +701,13 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
         self.close()
 
     def closeEvent(self, e):
+        if not self._confirmar_cierre():
+            e.ignore()
+            return
         self._pausar()
+        self._t_auto.stop()
+        self._guardar_sesion()
+        sesion.borrar(sesion.ruta_autoguardado(self.SISTEMA))
         for w in list(self._aux):
             w.close()
         if self._retorno is not None and self._retorno.isHidden():

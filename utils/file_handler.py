@@ -30,15 +30,20 @@ class ArchivoInvalido(ValueError):
     pass
 
 
-def guardar_proyecto(ruta, sistema: str, parametros, sim: dict, perfil_mov: Optional[PerfilMovimiento],
-                     visibilidad: AjustesVisibilidadSimulacion) -> None:
-    carga = {
+def serializar(sistema: str, parametros, sim: dict, perfil_mov: Optional[PerfilMovimiento],
+               visibilidad: AjustesVisibilidadSimulacion) -> dict:
+    return {
         "formato": FORMATO, "version": VERSION, "sistema": sistema,
         "parametros": asdict(parametros),
         "simulacion": sim,   # {"modo", "modo_pinon", "valor_manual" (θ° o X mm), "predeterminado"}
         "perfil_movimiento": perfil_mov.to_dict() if perfil_mov else None,
         "visibilidad": asdict(visibilidad),
     }
+
+
+def guardar_proyecto(ruta, sistema: str, parametros, sim: dict, perfil_mov: Optional[PerfilMovimiento],
+                     visibilidad: AjustesVisibilidadSimulacion) -> None:
+    carga = serializar(sistema, parametros, sim, perfil_mov, visibilidad)
     Path(ruta).write_text(json.dumps(carga, indent=2, ensure_ascii=False), encoding="utf-8")
 
 

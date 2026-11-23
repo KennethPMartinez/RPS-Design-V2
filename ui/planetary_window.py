@@ -157,14 +157,16 @@ class VentanaPlanetario(VentanaSistemaBase):
         self._refrescar_planetas()
         p = self.leer_parametros()
         if not p.es_valido():
-            self.statusBar().showMessage("Parámetros fuera de rango o entrada = bloqueado: no se recalcula.", 4000)
+            self._invalido("Parámetros fuera de rango o entrada = bloqueado: no se recalcula.")
             return
         if p.numero_planetas is None:
-            self.statusBar().showMessage("Ningún número de planetas cumple N | (Zs+Za) y D_ap < 2·cd·sin(π/N).", 6000)
+            self._invalido("Ningún número de planetas cumple N | (Zs+Za) y D_ap < 2·cd·sin(π/N).", 6000)
             return
-        motor = PlanetarioEngine(p)
+        motor, clave, reutilizado = self._geometria(p, lambda: PlanetarioEngine(p))
         self.motor_actual = self.perfil_actual = motor
-        self.sim.set_geometria(motor)
+        if not (reutilizado and clave == self._clave_pintada):      # la vista ya dibuja exactamente esta geometría
+            self.sim.set_geometria(motor)
+        self._clave_pintada = clave
         self.perfilActualizado.emit(motor)
         self._emitir_estado()
         self.statusBar().showMessage(motor.razones_texto(), 6000)

@@ -25,14 +25,25 @@ def qimage_a_rgb(img) -> np.ndarray:
     return np.ascontiguousarray(arr[: h - (h % 2), : w - (w % 2)]).copy()   # H.264 4:2:0: dimensiones pares
 
 
+def es_vp9(formato_video: str) -> bool:
+    """El combo de Ajustes dice «WebM — VP9»; cualquier texto que empiece por WebM/VP9 se trata como VP9."""
+    f = (formato_video or "").lower()
+    return f.startswith("webm") or "vp9" in f
+
+
 class GrabadorVideo:
-    def __init__(self, ruta: str, fps: int = 30, crf: int = 23):
+    """H.264 (MP4) por defecto; `vp9=True` escribe WebM (libvpx-vp9, calidad constante por CRF)."""
+
+    def __init__(self, ruta: str, fps: int = 30, crf: int = 23, vp9: bool = False):
         import imageio.v2 as imageio
         self.ruta, self.fps, self.n = ruta, fps, 0
-        self._w = imageio.get_writer(
-            ruta, format="FFMPEG", fps=fps, codec="libx264", pixelformat="yuv420p",
-            macro_block_size=2, output_params=["-crf", str(crf), "-preset", "medium",
-                                               "-movflags", "+faststart"])
+        if vp9:
+            codec, extra = "libvpx-vp9", ["-crf", str(crf), "-b:v", "0", "-row-mt", "1",
+                                          "-deadline", "good", "-cpu-used", "4"]
+        else:
+            codec, extra = "libx264", ["-crf", str(crf), "-preset", "medium", "-movflags", "+faststart"]
+        self._w = imageio.get_writer(ruta, format="FFMPEG", fps=fps, codec=codec, pixelformat="yuv420p",
+                                     macro_block_size=2, output_params=extra)
 
     def agregar(self, qimage) -> None:
         self._w.append_data(qimage_a_rgb(qimage)); self.n += 1
