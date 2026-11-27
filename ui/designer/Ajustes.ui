@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1070</width>
-    <height>815</height>
+    <height>824</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -34,7 +34,7 @@
       <item row="0" column="1">
        <widget class="QTabWidget" name="tabWidget">
         <property name="currentIndex">
-         <number>0</number>
+         <number>2</number>
         </property>
         <widget class="QWidget" name="tab">
          <attribute name="title">
@@ -1116,6 +1116,19 @@
               <number>14</number>
              </property>
              <item>
+              <widget class="QCheckBox" name="chkBajarFPSInactivo_2">
+               <property name="enabled">
+                <bool>true</bool>
+               </property>
+               <property name="text">
+                <string>Modo seguro para banco de pruebas</string>
+               </property>
+               <property name="checked">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
               <widget class="QCheckBox" name="chkBajarFPSInactivo">
                <property name="enabled">
                 <bool>true</bool>
@@ -1188,8 +1201,8 @@
             <property name="title">
              <string>Contacto y estudios de transmisión</string>
             </property>
-            <layout class="QVBoxLayout" name="groupAnalisisContactoLayout">
-             <item>
+            <layout class="QGridLayout" name="gridLayout_11">
+             <item row="2" column="1">
               <widget class="QCheckBox" name="checkBox_3">
                <property name="toolTip">
                 <string>Preferencia global del proyecto; los parámetros físicos se configuran en el editor de regímenes.</string>
@@ -1199,17 +1212,7 @@
                </property>
               </widget>
              </item>
-             <item>
-              <widget class="QLabel" name="lblEstadoContactoAjustes">
-               <property name="text">
-                <string>Activar esta opción permite trabajar con estudios de contacto desde el editor de regímenes. El análisis cuasiestático inicial no requiere inercias; no calcula impactos ni vibraciones.</string>
-               </property>
-               <property name="wordWrap">
-                <bool>true</bool>
-               </property>
-              </widget>
-             </item>
-             <item>
+             <item row="4" column="1">
               <widget class="QLabel" name="lblAccesoEditorRegimenes">
                <property name="text">
                 <string>Los parámetros del motor, las curvas de par y las propiedades de contacto pertenecen a cada estudio y se guardarán con el proyecto.</string>
@@ -1219,7 +1222,7 @@
                </property>
               </widget>
              </item>
-             <item>
+             <item row="5" column="1">
               <widget class="QPushButton" name="btnAbrirEditorRegimenes">
                <property name="enabled">
                 <bool>false</bool>
@@ -1235,6 +1238,16 @@
                </property>
                <property name="text">
                 <string>Abrir editor de regímenes…</string>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="1">
+              <widget class="QLabel" name="lblEstadoContactoAjustes">
+               <property name="text">
+                <string>Activar esta opción permite trabajar con estudios de contacto desde el editor de regímenes. El análisis cuasiestático inicial no requiere inercias; no calcula impactos ni vibraciones.</string>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
                </property>
               </widget>
              </item>

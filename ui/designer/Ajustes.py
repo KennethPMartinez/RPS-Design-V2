@@ -26,7 +26,7 @@ class Ui_Dialog(object):
     def setupUi(self, Dialog):
         if not Dialog.objectName():
             Dialog.setObjectName(u"Dialog")
-        Dialog.resize(1070, 815)
+        Dialog.resize(1070, 824)
         self.gridLayout_2 = QGridLayout(Dialog)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
         self.pushButton_2 = QPushButton(Dialog)
@@ -536,6 +536,13 @@ class Ui_Dialog(object):
         self.groupSimComportamientoLayout.setSpacing(11)
         self.groupSimComportamientoLayout.setObjectName(u"groupSimComportamientoLayout")
         self.groupSimComportamientoLayout.setContentsMargins(14, 14, 14, 14)
+        self.chkBajarFPSInactivo_2 = QCheckBox(self.groupSimComportamiento)
+        self.chkBajarFPSInactivo_2.setObjectName(u"chkBajarFPSInactivo_2")
+        self.chkBajarFPSInactivo_2.setEnabled(True)
+        self.chkBajarFPSInactivo_2.setChecked(True)
+
+        self.groupSimComportamientoLayout.addWidget(self.chkBajarFPSInactivo_2)
+
         self.chkBajarFPSInactivo = QCheckBox(self.groupSimComportamiento)
         self.chkBajarFPSInactivo.setObjectName(u"chkBajarFPSInactivo")
         self.chkBajarFPSInactivo.setEnabled(True)
@@ -573,31 +580,31 @@ class Ui_Dialog(object):
 
         self.groupAnalisisContacto = QGroupBox(self.tab_3)
         self.groupAnalisisContacto.setObjectName(u"groupAnalisisContacto")
-        self.groupAnalisisContactoLayout = QVBoxLayout(self.groupAnalisisContacto)
-        self.groupAnalisisContactoLayout.setObjectName(u"groupAnalisisContactoLayout")
+        self.gridLayout_11 = QGridLayout(self.groupAnalisisContacto)
+        self.gridLayout_11.setObjectName(u"gridLayout_11")
         self.checkBox_3 = QCheckBox(self.groupAnalisisContacto)
         self.checkBox_3.setObjectName(u"checkBox_3")
 
-        self.groupAnalisisContactoLayout.addWidget(self.checkBox_3)
-
-        self.lblEstadoContactoAjustes = QLabel(self.groupAnalisisContacto)
-        self.lblEstadoContactoAjustes.setObjectName(u"lblEstadoContactoAjustes")
-        self.lblEstadoContactoAjustes.setWordWrap(True)
-
-        self.groupAnalisisContactoLayout.addWidget(self.lblEstadoContactoAjustes)
+        self.gridLayout_11.addWidget(self.checkBox_3, 2, 1, 1, 1)
 
         self.lblAccesoEditorRegimenes = QLabel(self.groupAnalisisContacto)
         self.lblAccesoEditorRegimenes.setObjectName(u"lblAccesoEditorRegimenes")
         self.lblAccesoEditorRegimenes.setWordWrap(True)
 
-        self.groupAnalisisContactoLayout.addWidget(self.lblAccesoEditorRegimenes)
+        self.gridLayout_11.addWidget(self.lblAccesoEditorRegimenes, 4, 1, 1, 1)
 
         self.btnAbrirEditorRegimenes = QPushButton(self.groupAnalisisContacto)
         self.btnAbrirEditorRegimenes.setObjectName(u"btnAbrirEditorRegimenes")
         self.btnAbrirEditorRegimenes.setEnabled(False)
         self.btnAbrirEditorRegimenes.setMinimumSize(QSize(210, 30))
 
-        self.groupAnalisisContactoLayout.addWidget(self.btnAbrirEditorRegimenes)
+        self.gridLayout_11.addWidget(self.btnAbrirEditorRegimenes, 5, 1, 1, 1)
+
+        self.lblEstadoContactoAjustes = QLabel(self.groupAnalisisContacto)
+        self.lblEstadoContactoAjustes.setObjectName(u"lblEstadoContactoAjustes")
+        self.lblEstadoContactoAjustes.setWordWrap(True)
+
+        self.gridLayout_11.addWidget(self.lblEstadoContactoAjustes, 3, 1, 1, 1)
 
 
         self.gridLayout_8.addWidget(self.groupAnalisisContacto, 4, 0, 1, 1)
@@ -1349,7 +1356,7 @@ class Ui_Dialog(object):
 
         self.retranslateUi(Dialog)
 
-        self.tabWidget.setCurrentIndex(0)
+        self.tabWidget.setCurrentIndex(2)
         self.comboDecimales.setCurrentIndex(0)
         self.comboEstrategiaMuestreo.setCurrentIndex(0)
         self.comboRender.setCurrentIndex(0)
@@ -1444,6 +1451,7 @@ class Ui_Dialog(object):
         self.comboBackend.setItemText(2, QCoreApplication.translate("Dialog", u"H\u00edbrido \u2014 autom\u00e1tico", None))
 
         self.groupSimComportamiento.setTitle(QCoreApplication.translate("Dialog", u"Comportamiento", None))
+        self.chkBajarFPSInactivo_2.setText(QCoreApplication.translate("Dialog", u"Modo seguro para banco de pruebas", None))
         self.chkBajarFPSInactivo.setText(QCoreApplication.translate("Dialog", u"Reducir actualizaciones si la ventana est\u00e1 inactiva", None))
         self.chkDetenerInvalido.setText(QCoreApplication.translate("Dialog", u"Detener simulaci\u00f3n ante un estado matem\u00e1ticamente inv\u00e1lido", None))
         self.chkConservarPausa.setText(QCoreApplication.translate("Dialog", u"Conservar resultados calculados al pausar", None))
@@ -1453,12 +1461,12 @@ class Ui_Dialog(object):
         self.checkBox_3.setToolTip(QCoreApplication.translate("Dialog", u"Preferencia global del proyecto; los par\u00e1metros f\u00edsicos se configuran en el editor de reg\u00edmenes.", None))
 #endif // QT_CONFIG(tooltip)
         self.checkBox_3.setText(QCoreApplication.translate("Dialog", u"Habilitar an\u00e1lisis basado en contacto (mayor costo de c\u00e1lculo)", None))
-        self.lblEstadoContactoAjustes.setText(QCoreApplication.translate("Dialog", u"Activar esta opci\u00f3n permite trabajar con estudios de contacto desde el editor de reg\u00edmenes. El an\u00e1lisis cuasiest\u00e1tico inicial no requiere inercias; no calcula impactos ni vibraciones.", None))
         self.lblAccesoEditorRegimenes.setText(QCoreApplication.translate("Dialog", u"Los par\u00e1metros del motor, las curvas de par y las propiedades de contacto pertenecen a cada estudio y se guardar\u00e1n con el proyecto.", None))
 #if QT_CONFIG(tooltip)
         self.btnAbrirEditorRegimenes.setToolTip(QCoreApplication.translate("Dialog", u"Disponible despu\u00e9s de conectar este bot\u00f3n con VentanaPerfilVelocidad en Python.", None))
 #endif // QT_CONFIG(tooltip)
         self.btnAbrirEditorRegimenes.setText(QCoreApplication.translate("Dialog", u"Abrir editor de reg\u00edmenes\u2026", None))
+        self.lblEstadoContactoAjustes.setText(QCoreApplication.translate("Dialog", u"Activar esta opci\u00f3n permite trabajar con estudios de contacto desde el editor de reg\u00edmenes. El an\u00e1lisis cuasiest\u00e1tico inicial no requiere inercias; no calcula impactos ni vibraciones.", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_3), QCoreApplication.translate("Dialog", u"Simulaci\u00f3n y rendimiento", None))
         self.comboTemaLabel.setText(QCoreApplication.translate("Dialog", u"Preset global", None))
         self.comboTema.setItemText(0, QCoreApplication.translate("Dialog", u"Oscuro", None))
