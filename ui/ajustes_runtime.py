@@ -7,10 +7,10 @@ Ventanas:            runtime.cambiado (Signal[SettingsState]) avisa tras Aplicar
 Plots nuevos:        widgets.pg_helpers.configurar_menu_plot llama runtime.tema_a_plot(plot).
 
 Qué se aplica de verdad: tema/paleta/fuentes/trazos (ThemeManager), OpenGL, backend CPU/GPU/Híbrido
-(ajustes.modo_hardware), desviaciones, cadencia visual (FrameScheduler), pestañas General (sesión, confirmar salida,
-autoguardado, avisos, sobrescritura) y Exportación (imagen y video). Se PERSISTEN pero aún no actúan: V-Sync,
-simulación por contacto, detener ante inválido, conservar pausa, caché de geometría, decimales, estrategia de
-muestreo y estimación de costo (ver progress.md §14).
+(ajustes.modo_hardware), cadencia visual (FrameScheduler), pestañas General y Exportación, Simulación
+(inválido, pausa, caché) y Cálculo y precisión (decimales -> utils.formato_numerico; estrategia, muestras y
+tolerancias -> engine.sampling_preferences; indicador de costo). Se PERSISTEN pero no actúan: V-Sync y simulación
+por contacto (ver progress.md §14).
 """
 from __future__ import annotations
 
@@ -19,7 +19,9 @@ from PySide6 import QtCore, QtGui, QtWidgets
 from config.app_settings import ajustes
 from config.settings_model import SettingsState
 from config.settings_store import SettingsStore
+from engine import sampling_preferences as sp
 from ui.theme_manager import ThemeManager
+from utils import formato_numerico
 
 
 class AjustesRuntime(QtCore.QObject):
@@ -68,6 +70,12 @@ class AjustesRuntime(QtCore.QObject):
         ajustes.modo_hardware = estado.simulacion.backend.split(" — ")[0].replace("Híbrido", "Hibrido")
         ajustes.desviacion.desviacion_lineal_mm = estado.calculo.desviacion_lineal_mm
         ajustes.desviacion.desviacion_angular_grados = estado.calculo.desviacion_angular_grados
+        c = estado.calculo                      # Ajustes → Cálculo: discretización del perfil y formato de números
+        sp.configurar_politica(sp.Politica(
+            sp.ESTRATEGIA_ADAPTATIVA if "Adaptativa" in c.estrategia_muestreo else sp.ESTRATEGIA_UNIFORME,
+            int(c.muestras_uniformes), int(c.max_muestras), float(c.desviacion_lineal_mm),
+            float(c.desviacion_angular_grados), bool(c.mostrar_estimacion)))
+        formato_numerico.configurar(c.decimales)
         fondo = QtGui.QColor(estado.apariencia.ui_colores.get("Fondo de ventana", "#222222"))
         ajustes.modo_oscuro = fondo.lightness() < 128
 

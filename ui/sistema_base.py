@@ -39,8 +39,11 @@ from exporters.video_recorder import GrabadorVideo
 from ui.errores import manejador_seguro
 from ui.property_windows import VentanaPerfilDiente, VentanaPropiedad
 from simulation.frame_scheduler import FrameScheduler
+from engine import sampling_preferences
 from ui import sesion
 from ui.ajustes_runtime import runtime
+from utils import costo_calculo, formato_numerico
+from utils.formato_numerico import fmt
 from ui.velocity_profile_window import VentanaPerfilVelocidad
 from utils import file_handler
 from widgets.pg_helpers import reemplazar_widget
@@ -100,6 +103,11 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
         self._cache_geo = OrderedDict()         # «Reutilizar geometría no modificada» (hasta 8 geometrías)
         self._clave_pintada = None              # geometría que la vista ya dibuja
         self._clave_lt = None                   # línea de tiempo vigente (para «Conservar resultados al pausar»)
+        self._t_geo, self._geo_reutilizada = 0.0, False        # tiempo MEDIDO de la última geometría calculada
+        self._formato_visto = formato_numerico.clave()
+        self._lbl_costo = QtWidgets.QLabel()                   # «Mostrar estimación de costo» (barra de estado)
+        self._lbl_costo.setVisible(False)
+        self.statusBar().addPermanentWidget(self._lbl_costo)
         self._conectar()
         self._aplicar_modo()
         self._recalcular()
@@ -204,25 +212,55 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
 
     @manejador_seguro
     def _clave_geometria(self, p) -> str:
-        """Todo lo que determina la geometría calculada: parámetros + tolerancias + backend de cálculo."""
-        d = ajustes.desviacion
-        return repr((type(p).__name__, sorted(asdict(p).items()), d.desviacion_lineal_mm,
-                     d.desviacion_angular_grados, ajustes.modo_hardware))
+        """Todo lo que determina la geometría calculada: parámetros + discretización (estrategia, muestras, tolerancias) + backend."""
+        return repr((type(p).__name__, sorted(asdict(p).items()), ajustes.modo_hardware,
+                     sampling_preferences.politica_actual().clave))
 
     def _geometria(self, p, fabrica):
         """(valor, clave, reutilizado). «Reutilizar geometría no modificada»: parámetros ya calculados no se recalculan."""
         clave = self._clave_geometria(p)
         if not runtime.estado.simulacion.cache_geometria:
             self._cache_geo.clear()
-            return fabrica(), clave, False
+            t0 = time.perf_counter()
+            valor = fabrica()
+            self._t_geo, self._geo_reutilizada = time.perf_counter() - t0, False
+            return valor, clave, False
         if clave in self._cache_geo:
             self._cache_geo.move_to_end(clave)
+            self._geo_reutilizada = True
             return self._cache_geo[clave], clave, True
+        t0 = time.perf_counter()
         valor = fabrica()
+        self._t_geo, self._geo_reutilizada = time.perf_counter() - t0, False
         self._cache_geo[clave] = valor
         while len(self._cache_geo) > 8:
             self._cache_geo.popitem(last=False)
         return valor, clave, False
+
+    # -- discretización y costo (Ajustes → Cálculo y precisión) ---------------------------------------------
+    def _infos_muestreo(self) -> list:
+        """[(etiqueta, MuestreoInfo)] de la geometría vigente (Planetario: sol y anular)."""
+        i = getattr(self.perfil_actual, "muestreo", None)
+        return [("", i)] if i is not None else []
+
+    def _actualizar_costo(self) -> None:
+        infos = self._infos_muestreo()
+        visible = runtime.estado.calculo.mostrar_estimacion
+        self._lbl_costo.setVisible(visible)
+        if visible:
+            texto, nivel = costo_calculo.resumen(infos, self._t_geo, self._geo_reutilizada)
+            self._lbl_costo.setText(texto)
+            self._lbl_costo.setStyleSheet("color:#d97706;" if nivel == "aviso" else "")
+        if not self._geo_reutilizada:                      # advertir una sola vez, cuando se calcula
+            adv = costo_calculo.advertencia(infos)
+            if adv:
+                self._aviso(adv, 8000)
+
+    def _refrescar_formato(self) -> None:
+        """Cambió «Decimales»: se repinta lo visible (la precisión interna no se toca)."""
+        self._emitir_estado()
+        if self.perfil_actual is not None:
+            self.perfilActualizado.emit(self.perfil_actual)
 
     def _invalido(self, texto: str, ms: int = 4000) -> None:
         """Estado no calculable: aviso y, si Ajustes lo pide, se detiene la reproducción en curso."""
@@ -250,6 +288,7 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
             self.sim.set_geometria(res)
             self.sim.set_curva_base(*self._curva_base(motor))
         self._clave_pintada = clave
+        self._actualizar_costo()
         self.perfilActualizado.emit(res)
         self._emitir_estado()
         if self._es_auto() and self._rango_angulo_auto() is not None:    # L / prrp cambiaron: reencajar
@@ -393,6 +432,16 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
         sim = estado.simulacion
         self._scheduler.set_preferences(sim.fps, sim.fps_personalizado, sim.bajar_fps_inactivo)
         self._configurar_autoguardado()
+        try:                                       # nueva discretización/tolerancia => otra geometría (sin reiniciar)
+            p = self.leer_parametros()
+            if p.es_valido() and self._clave_geometria(p) != self._clave_pintada:
+                self._recalcular()
+        except Exception as e:
+            print(f"[ajustes] no se pudo recalcular con la nueva discretización: {e}")
+        if formato_numerico.clave() != self._formato_visto:
+            self._formato_visto = formato_numerico.clave()
+            self._refrescar_formato()
+        self._actualizar_costo()
 
     def _reiniciar(self):
         self._pausar()
@@ -425,7 +474,7 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
         self._emitir_estado()
         ahora = time.perf_counter()
         if ahora - self._t_msg > 0.1:
-            self.statusBar().showMessage(f"t = {self._t:6.2f} s   ·   θ motor = {ang:9.2f}°")
+            self.statusBar().showMessage(f"t = {fmt(self._t, 's')}   ·   θ motor = {fmt(ang, '°')}")
             self._t_msg = ahora
 
     @manejador_seguro

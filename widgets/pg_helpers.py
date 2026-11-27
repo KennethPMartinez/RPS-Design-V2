@@ -15,6 +15,7 @@ import weakref
 
 import numpy as np
 import pyqtgraph as pg
+from utils.formato_numerico import fmt
 from PySide6 import QtCore, QtGui, QtWidgets
 
 from widgets.plot_menu import MenuGrafica
@@ -148,12 +149,12 @@ class InspectorCurvas(QtCore.QObject):
             nombre = curva.name() if hasattr(curva, "name") and curva.name() else ""
             self.v.setPos(sx); self.h.setPos(sy)
             self.punto.setData([sx], [sy]); self.punto.show()
-            self.texto.setText((f"{nombre}\n" if nombre else "") + f"X: {sx:.6g}\nY: {sy:.6g}")
+            self.texto.setText((f"{nombre}\n" if nombre else "") + f"X: {fmt(sx)}\nY: {fmt(sy)}")
             self.texto.setPos(sx, sy); self.texto.show()
         else:
             self.v.setPos(mx); self.h.setPos(my)
             self.punto.hide()
-            self.texto.setText(f"X: {mx:.4g}\nY: {my:.4g}"); self.texto.setPos(mx, my); self.texto.show()
+            self.texto.setText(f"X: {fmt(mx)}\nY: {fmt(my)}"); self.texto.setPos(mx, my); self.texto.show()
 
 
 def reemplazar_widget(placeholder: QtWidgets.QWidget, nuevo: QtWidgets.QWidget) -> QtWidgets.QWidget:

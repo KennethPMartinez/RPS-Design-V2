@@ -39,7 +39,7 @@ from typing import Optional
 import numpy as np
 
 from engine import math_utils as mu
-from engine import backend_selector
+from engine import backend_selector, sampling_preferences
 from engine.system_context import ContextoSistema
 from engine.rollerpinion_engine import RollerPinionEngine
 from engine.contact_engine import ContactEngine
@@ -86,6 +86,8 @@ class ResultadoPerfil:
     radio_rodillo: Optional[float] = None
     diente_centros_x: Optional[np.ndarray] = None
     diente_centros_y: Optional[np.ndarray] = None
+    # Discretización usada para el perfil (engine.sampling_preferences.MuestreoInfo); None si el n fue explícito
+    muestreo: Optional[object] = None
 
 
 class BaseEngine(ABC):
@@ -259,18 +261,32 @@ class BaseEngine(ABC):
         """1/curvatura(θ) -- se expone el radio, no la curvatura."""
         return 1.0 / self.curvatura(theta, h=h, xp=xp)
 
-    def generar_perfil(self, n_puntos: int = NPUNTOS_EXPORTACION_DEFAULT,
+    def _evaluador_offset(self):
+        """θ (array NumPy) -> (N, 2) del perfil real: lo que se discretiza (el muestreo adaptativo es dependiente de
+        datos y siempre corre en NumPy; el resto del cálculo sigue usando el backend elegido)."""
+        return lambda ts: np.column_stack(self.curva_offset(ts, xp=np))
+
+    def generar_perfil(self, n_puntos: int | None = None,
                         incluir_analisis: bool = True) -> ResultadoPerfil:
+        """`n_puntos` explícito (exportaciones, CAD): malla uniforme de ese tamaño, SIN cambios.
+        `None` (simulación): discretización según Ajustes → Cálculo (`sampling_preferences.politica_actual()`)."""
         theta_lim = self.theta_lim
-        xp = backend_selector.xp_para(n_puntos)
-        theta = xp.linspace(-theta_lim, theta_lim, n_puntos)
+        info = None
+        if n_puntos is None:
+            theta_np, info = sampling_preferences.muestrear(self._evaluador_offset(), -theta_lim, theta_lim)
+            n_puntos = theta_np.size
+            xp = backend_selector.xp_para(n_puntos)
+            theta = xp.asarray(theta_np)
+        else:
+            xp = backend_selector.xp_para(n_puntos)
+            theta = xp.linspace(-theta_lim, theta_lim, n_puntos)
         cx, cy = self.curva_generatriz(theta, xp=xp)
         ox, oy = self.curva_offset(theta, xp=xp)
         resultado = ResultadoPerfil(
             theta=backend_selector.a_numpy(theta),
             curva_x=backend_selector.a_numpy(cx), curva_y=backend_selector.a_numpy(cy),
             offset_x=backend_selector.a_numpy(ox), offset_y=backend_selector.a_numpy(oy),
-            theta_lim=theta_lim, paso=self.calcular_paso(),
+            theta_lim=theta_lim, paso=self.calcular_paso(), muestreo=info,
         )
         if incluir_analisis:
             angulo = self.angulo_presion(theta, xp=xp)

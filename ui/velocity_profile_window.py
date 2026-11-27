@@ -25,6 +25,7 @@ from PySide6 import QtCore, QtWidgets
 from engine.motion_engine import (LEYES, MAX_COEFICIENTES, UNIDADES, FabricaPresets, LineaTiempo,
                                   PerfilMovimiento, RegistroLeyes, Tramo, escalar_perfil)
 from ui.errores import manejador_seguro
+from utils.formato_numerico import fmt as fmt_num
 from widgets.plot_menu import etiqueta_eje_x, transformar
 from widgets.pg_helpers import (InspectorCurvas, configurar_menu_plot, desactivar_clic_leyenda, embeber_en_contenedor,
                                 reemplazar_widget)
@@ -241,7 +242,7 @@ class VentanaPerfilVelocidad(QtWidgets.QMainWindow):
         tabla.setRowCount(len(filas))
         for i, fila in enumerate(filas):
             for j, v in enumerate(fila):
-                tabla.setItem(i, j, QtWidgets.QTableWidgetItem(f"{float(v):.6g}"))
+                tabla.setItem(i, j, QtWidgets.QTableWidgetItem(fmt_num(float(v))))
         if etiquetas:
             tabla.setVerticalHeaderLabels(etiquetas)
         tabla.blockSignals(False)

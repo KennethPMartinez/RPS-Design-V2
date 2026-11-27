@@ -26,6 +26,7 @@ N | (Zs+Za)  y  D_ap < 2·cd·sin(π/N).
 from __future__ import annotations
 
 import math
+from utils.formato_numerico import fmt, fmt_signo
 from dataclasses import dataclass
 
 import numpy as np
@@ -120,7 +121,7 @@ class PlanetarioEngine:
         return int(m) % self.Zrp, abs(x - m) < 1e-6
 
     def razones_texto(self) -> str:
-        return (f"θ sol {self.k_sol:+.4f} · brazo {self.k_brazo:+.4f} · anular {self.k_anular:+.4f}  (× θ entrada)")
+        return (f"θ sol {fmt_signo(self.k_sol)} · brazo {fmt_signo(self.k_brazo)} · anular {fmt_signo(self.k_anular)}  (× θ entrada)")
 
     def estado(self, theta_in_rad: float) -> EstadoPlanetario:
         fs = self.k_sol * theta_in_rad
@@ -171,8 +172,8 @@ class PlanetarioEngine:
         p = self.parametros
         filas = [("Dientes sol / anular (Za = Zs + 2·Zrp)", f"{self.Zs} / {self.Za}"),
                  ("Rodillos por planeta", self.Zrp), ("Planetas", self.N),
-                 ("Distancia entre centros sol-planeta", f"{self.cd:.4f} mm"),
-                 ("Diámetro exterior del planeta D_ap", f"{self.d_ap:.4f} mm"),
+                 ("Distancia entre centros sol-planeta", fmt(self.cd, "mm")),
+                 ("Diámetro exterior del planeta D_ap", fmt(self.d_ap, "mm")),
                  ("Entrada / bloqueado", f"{p.componente_entrada.value} / {p.componente_bloqueado.value}"),
                  ("Giros relativos", self.razones_texto())]
         cuerpo = "".join(f"<tr><td style='border-bottom:1px solid #999'>{a}</td>"

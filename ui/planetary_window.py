@@ -167,6 +167,7 @@ class VentanaPlanetario(VentanaSistemaBase):
         if not (reutilizado and clave == self._clave_pintada):      # la vista ya dibuja exactamente esta geometría
             self.sim.set_geometria(motor)
         self._clave_pintada = clave
+        self._actualizar_costo()
         self.perfilActualizado.emit(motor)
         self._emitir_estado()
         self.statusBar().showMessage(motor.razones_texto(), 6000)
@@ -176,6 +177,10 @@ class VentanaPlanetario(VentanaSistemaBase):
         return est, self.motor_actual.contactos(est)
 
     # ------------------------------------------------------------------ menú
+    def _infos_muestreo(self) -> list:
+        m = self.motor_actual
+        return [] if m is None else [("sol", m.res_sol.muestreo), ("anular", m.res_anular.muestreo)]
+
     def _items_exportacion(self):
         e = self.motor_actual
         return [("Sol", e.sol, e.p_sol), ("Anular", e.anular, e.p_anular)]

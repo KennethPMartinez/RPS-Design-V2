@@ -23,6 +23,7 @@ import pyqtgraph as pg
 from PySide6 import QtCore, QtWidgets
 
 from ui.errores import manejador_seguro
+from utils.formato_numerico import fmt as _fmt_num
 from widgets.pg_helpers import (AngleControl, ControlLineal, InspectorCurvas, configurar_menu_plot,
                                 desactivar_clic_leyenda, reemplazar_widget)
 
@@ -30,7 +31,9 @@ from Graficas_Window import Ui_Graficas_Window as Ui_Propiedad          # noqa: 
 from ToothProfile_Window import Ui_Graficas_Window as Ui_PerfilDiente   # noqa: E402
 
 
-def _llenar_tabla(tabla: QtWidgets.QTableWidget, columnas, encabezados, fmt="{:.6g}") -> None:
+def _llenar_tabla(tabla: QtWidgets.QTableWidget, columnas, encabezados, fmt=None) -> None:
+    """`fmt` = plantilla opcional; por defecto el formato de Ajustes → Cálculo (utils.formato_numerico)."""
+    formatear = (lambda v: fmt.format(v)) if fmt else _fmt_num
     tabla.setUpdatesEnabled(False)
     tabla.clearContents()
     tabla.setColumnCount(len(encabezados))
@@ -40,7 +43,7 @@ def _llenar_tabla(tabla: QtWidgets.QTableWidget, columnas, encabezados, fmt="{:.
     tabla.setRowCount(n)
     for j, col in enumerate(columnas):
         for i, v in enumerate(col):
-            tabla.setItem(i, j, QtWidgets.QTableWidgetItem(v if isinstance(v, str) else fmt.format(v)))
+            tabla.setItem(i, j, QtWidgets.QTableWidgetItem(v if isinstance(v, str) else formatear(v)))
     tabla.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.Stretch)
     tabla.setUpdatesEnabled(True)
 

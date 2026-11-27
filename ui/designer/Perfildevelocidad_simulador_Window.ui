@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1251</width>
-    <height>887</height>
+    <width>1370</width>
+    <height>860</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -18,716 +18,2408 @@
   </property>
   <property name="minimumSize">
    <size>
-    <width>0</width>
-    <height>0</height>
+    <width>950</width>
+    <height>650</height>
    </size>
   </property>
   <property name="windowTitle">
-   <string>Giro Impuesto</string>
+   <string>Editor de regímenes de simulación — RPS Design V2</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QGridLayout" name="gridLayout_6">
-    <item row="2" column="3">
-     <widget class="QPushButton" name="pushButton_10">
-      <property name="text">
-       <string>Cancelar</string>
-      </property>
-     </widget>
+   <layout class="QVBoxLayout" name="layoutEditorRegimenes">
+    <item>
+     <layout class="QHBoxLayout" name="layoutEncabezadoRegimenes"/>
     </item>
-    <item row="2" column="2">
-     <widget class="QPushButton" name="pushButton_9">
-      <property name="text">
-       <string>Aceptar</string>
+    <item>
+     <widget class="QTabWidget" name="tabRegimenes">
+      <property name="currentIndex">
+       <number>0</number>
       </property>
-     </widget>
-    </item>
-    <item row="2" column="1">
-     <spacer name="horizontalSpacer">
-      <property name="orientation">
-       <enum>Qt::Orientation::Horizontal</enum>
-      </property>
-      <property name="sizeHint" stdset="0">
-       <size>
-        <width>40</width>
-        <height>20</height>
-       </size>
-      </property>
-     </spacer>
-    </item>
-    <item row="1" column="0" colspan="4">
-     <widget class="QGroupBox" name="groupBox_2">
-      <property name="title">
-       <string>Setup</string>
-      </property>
-      <layout class="QGridLayout" name="gridLayout_4">
-       <item row="0" column="4" rowspan="2">
-        <widget class="QGroupBox" name="groupBox_7">
-         <property name="title">
-          <string>Parámetros de función</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_10">
-          <item row="2" column="0" colspan="3">
-           <widget class="QStackedWidget" name="stackedWidget">
-            <property name="currentIndex">
-             <number>4</number>
-            </property>
-            <widget class="QWidget" name="page">
-             <layout class="QGridLayout" name="gridLayout_12">
-              <item row="0" column="0">
-               <widget class="QLabel" name="label_10">
-                <property name="text">
-                 <string>Pendiente</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="1">
-               <widget class="QDoubleSpinBox" name="doubleSpinBox_pendientegen"/>
-              </item>
-             </layout>
-            </widget>
-            <widget class="QWidget" name="page_2">
-             <layout class="QGridLayout" name="gridLayout_13">
-              <item row="1" column="0">
-               <widget class="QLabel" name="label_11">
-                <property name="text">
-                 <string>Amplitud</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="0" colspan="2">
-               <spacer name="verticalSpacer">
-                <property name="orientation">
-                 <enum>Qt::Orientation::Vertical</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>20</width>
-                  <height>40</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
-              <item row="2" column="0">
-               <widget class="QLabel" name="label_12">
-                <property name="text">
-                 <string>Frecuencia (Hz)</string>
-                </property>
-               </widget>
-              </item>
-              <item row="3" column="1">
-               <widget class="QDoubleSpinBox" name="doubleSpinBox_Fase"/>
-              </item>
-              <item row="3" column="0">
-               <widget class="QLabel" name="label_13">
-                <property name="text">
-                 <string>Fase (°)</string>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="1">
-               <widget class="QDoubleSpinBox" name="doubleSpinBox_frecuencia"/>
-              </item>
-              <item row="1" column="1">
-               <widget class="QDoubleSpinBox" name="doubleSpinBox_amplitud"/>
-              </item>
-              <item row="4" column="0" colspan="2">
-               <spacer name="verticalSpacer_2">
-                <property name="orientation">
-                 <enum>Qt::Orientation::Vertical</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>20</width>
-                  <height>40</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
-             </layout>
-            </widget>
-            <widget class="QWidget" name="page_3">
-             <layout class="QGridLayout" name="gridLayout_14">
-              <item row="0" column="0" colspan="2">
-               <widget class="QTableWidget" name="tableWidget_coeficientes"/>
-              </item>
-              <item row="1" column="0">
-               <widget class="QPushButton" name="pushButton_ponercoeficiente">
-                <property name="text">
-                 <string>+ Coeficiente</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="1">
-               <widget class="QPushButton" name="pushButton_quitarcoeficiente">
-                <property name="text">
-                 <string>- Coeficiente</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-            <widget class="QWidget" name="page_4">
-             <layout class="QGridLayout" name="gridLayout_15">
-              <item row="1" column="1">
-               <widget class="QSpinBox" name="spinBox_gradocurva"/>
-              </item>
-              <item row="1" column="0">
-               <widget class="QLabel" name="label_19">
-                <property name="text">
-                 <string>Grado de la curva</string>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="0" colspan="2">
-               <widget class="QTableWidget" name="tableWidget_listapuntos"/>
-              </item>
-              <item row="3" column="0">
-               <widget class="QPushButton" name="pushButton_ponerpunto">
-                <property name="text">
-                 <string>+ Punto</string>
-                </property>
-               </widget>
-              </item>
-              <item row="3" column="1">
-               <widget class="QPushButton" name="pushButton_quitarpunto">
-                <property name="text">
-                 <string>- Punto</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-            <widget class="QWidget" name="page_5">
-             <layout class="QGridLayout" name="gridLayout_16">
-              <item row="1" column="1">
-               <widget class="QDoubleSpinBox" name="doubleSpinBox_pendientefin"/>
-              </item>
-              <item row="2" column="0" colspan="2">
-               <widget class="QTableWidget" name="tableWidget_Listapuntosspline"/>
-              </item>
-              <item row="0" column="1">
-               <widget class="QDoubleSpinBox" name="doubleSpinBox_pendienteini"/>
-              </item>
-              <item row="0" column="0">
-               <widget class="QLabel" name="label_14">
-                <property name="text">
-                 <string>Pendiente incial</string>
-                </property>
-               </widget>
-              </item>
-              <item row="3" column="0">
-               <widget class="QPushButton" name="pushButton_ponerpuntospline">
-                <property name="text">
-                 <string>+ Punto</string>
-                </property>
-               </widget>
-              </item>
-              <item row="3" column="1">
-               <widget class="QPushButton" name="pushButton_quitarpuntospline">
-                <property name="text">
-                 <string>- Punto</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="0">
-               <widget class="QLabel" name="label_15">
-                <property name="text">
-                 <string>Pendiente final</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="0" column="3" rowspan="2">
-        <widget class="QGroupBox" name="groupBox_6">
-         <property name="title">
-          <string>Funciones de Movimiento</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_9">
-          <item row="4" column="0" colspan="2">
-           <widget class="QPushButton" name="pushButton_reemplazarfuncion">
-            <property name="text">
-             <string>Reemplazar</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="1">
-           <widget class="QComboBox" name="comboBox_tipodefuncion">
-            <item>
-             <property name="text">
-              <string>Rampa lineal</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Rampa cúbica</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Cicloidal</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Armónica</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Sinusoidal</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Sinusoidal modificada</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Polinómica</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Lista de puntos</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Spline</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Trapezoidal modificada</string>
-             </property>
-            </item>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QPushButton" name="pushButton_ponerfuncion">
-            <property name="text">
-             <string>+ Funcion</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0" colspan="2">
-           <widget class="Line" name="line_2">
-            <property name="orientation">
-             <enum>Qt::Orientation::Horizontal</enum>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="0">
-           <widget class="QLabel" name="label_7">
-            <property name="text">
-             <string>Tipo de funcion</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QPushButton" name="pushButton_quitarfuncion">
-            <property name="text">
-             <string>- Funcion</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="0" colspan="2">
-           <widget class="QListWidget" name="listWidget_Ley">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="minimumSize">
-             <size>
-              <width>0</width>
-              <height>150</height>
-             </size>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>16777215</width>
-              <height>150</height>
-             </size>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="1" column="0">
-        <widget class="QGroupBox" name="groupBox_5">
-         <property name="title">
-          <string>Intervalo</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_8">
-          <item row="3" column="2">
-           <widget class="QLabel" name="label_6">
-            <property name="text">
-             <string>Y₂</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="2">
-           <widget class="QLabel" name="label_4">
-            <property name="text">
-             <string>Y₁</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="0">
-           <widget class="QLabel" name="label_5">
-            <property name="text">
-             <string>t₂</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="3">
-           <widget class="QDoubleSpinBox" name="doubleSpinBox_yfin"/>
-          </item>
-          <item row="3" column="1">
-           <widget class="QDoubleSpinBox" name="doubleSpinBox_tiempofin"/>
-          </item>
-          <item row="0" column="3">
-           <widget class="QDoubleSpinBox" name="doubleSpinBox_yini"/>
-          </item>
-          <item row="0" column="1">
-           <widget class="QDoubleSpinBox" name="doubleSpinBox_tiempoini"/>
-          </item>
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_3">
-            <property name="text">
-             <string>t₁</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0" colspan="4">
-           <widget class="Line" name="line">
-            <property name="orientation">
-             <enum>Qt::Orientation::Horizontal</enum>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="0" column="0">
-        <widget class="QGroupBox" name="groupBox_4">
-         <property name="title">
-          <string>Tramos</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_7">
-          <item row="0" column="0" colspan="2">
-           <widget class="QListWidget" name="listWidget_tramo">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="minimumSize">
-             <size>
-              <width>0</width>
-              <height>150</height>
-             </size>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>16777215</width>
-              <height>150</height>
-             </size>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QPushButton" name="pushButton_quitartramo">
-            <property name="text">
-             <string>- Tramo</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QPushButton" name="pushButton_ponertramo">
-            <property name="text">
-             <string>+ Tramo</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-      </layout>
-     </widget>
-    </item>
-    <item row="0" column="0" colspan="4">
-     <widget class="QGroupBox" name="groupBox_3">
-      <property name="title">
-       <string>Gráfica</string>
-      </property>
-      <layout class="QGridLayout" name="gridLayout_5">
-       <item row="1" column="0">
-        <widget class="QLabel" name="label">
-         <property name="text">
-          <string>Presets</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="1">
-        <widget class="QComboBox" name="comboBox_preset">
-         <item>
-          <property name="text">
-           <string>Arranque y parada suaves</string>
+      <widget class="QWidget" name="tabCinematico">
+       <attribute name="title">
+        <string>Régimen cinemático</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="layoutCinematico">
+        <item>
+         <widget class="QScrollArea" name="scrollRegimenCinematico">
+          <property name="widgetResizable">
+           <bool>true</bool>
           </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Oscilador 100Hz</string>
+          <widget class="QWidget" name="contenidoCinematico">
+           <property name="geometry">
+            <rect>
+             <x>0</x>
+             <y>0</y>
+             <width>1312</width>
+             <height>807</height>
+            </rect>
+           </property>
+           <layout class="QVBoxLayout" name="layoutContenidoCinematico">
+            <item>
+             <widget class="QGroupBox" name="groupBox_3">
+              <property name="title">
+               <string>Gráfica</string>
+              </property>
+              <layout class="QGridLayout" name="gridLayout_5">
+               <item row="1" column="0">
+                <widget class="QLabel" name="label">
+                 <property name="text">
+                  <string>Presets</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="1">
+                <widget class="QComboBox" name="comboBox_preset">
+                 <item>
+                  <property name="text">
+                   <string>Arranque y parada suaves</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>Oscilador 100Hz</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>Backlash</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>Giro de 90°</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>Giro de 180°</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>Indexer</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>Lavadora</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>Vibrador</string>
+                  </property>
+                 </item>
+                </widget>
+               </item>
+               <item row="1" column="5" rowspan="2">
+                <widget class="QFrame" name="frame">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>0</width>
+                   <height>370</height>
+                  </size>
+                 </property>
+                 <property name="frameShape">
+                  <enum>QFrame::Shape::StyledPanel</enum>
+                 </property>
+                 <property name="frameShadow">
+                  <enum>QFrame::Shadow::Raised</enum>
+                 </property>
+                 <layout class="QGridLayout" name="gridLayout">
+                  <item row="0" column="0" colspan="2">
+                   <widget class="QWidget" name="widget_grafica" native="true">
+                    <property name="contextMenuPolicy">
+                     <enum>Qt::ContextMenuPolicy::CustomContextMenu</enum>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="0">
+                   <widget class="QGroupBox" name="groupBox">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="title">
+                     <string>Mostrar curvas</string>
+                    </property>
+                    <layout class="QGridLayout" name="gridLayout_3">
+                     <item row="0" column="1">
+                      <widget class="QCheckBox" name="checkBox_Velocidad">
+                       <property name="text">
+                        <string>Velocidad Angular</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="0">
+                      <widget class="QCheckBox" name="checkBox_Posicion">
+                       <property name="text">
+                        <string>Posición Angular</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="2">
+                      <widget class="QCheckBox" name="checkBox_Aceleracion">
+                       <property name="text">
+                        <string>Aceleración Angular</string>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+               <item row="2" column="0" colspan="3">
+                <widget class="QFrame" name="frame_2">
+                 <property name="frameShape">
+                  <enum>QFrame::Shape::StyledPanel</enum>
+                 </property>
+                 <property name="frameShadow">
+                  <enum>QFrame::Shadow::Raised</enum>
+                 </property>
+                 <layout class="QGridLayout" name="gridLayout_2">
+                  <item row="1" column="0">
+                   <widget class="QGraphicsView" name="graphicsView_ruedamovil"/>
+                  </item>
+                  <item row="2" column="0">
+                   <widget class="QFrame" name="frame_3">
+                    <property name="frameShape">
+                     <enum>QFrame::Shape::StyledPanel</enum>
+                    </property>
+                    <property name="frameShadow">
+                     <enum>QFrame::Shadow::Raised</enum>
+                    </property>
+                    <layout class="QGridLayout" name="gridLayout_11">
+                     <item row="0" column="4">
+                      <widget class="QDoubleSpinBox" name="doubleSpinBox_5"/>
+                     </item>
+                     <item row="0" column="1">
+                      <widget class="QPushButton" name="pushButton_pausar">
+                       <property name="minimumSize">
+                        <size>
+                         <width>0</width>
+                         <height>50</height>
+                        </size>
+                       </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>50</width>
+                         <height>16777215</height>
+                        </size>
+                       </property>
+                       <property name="font">
+                        <font>
+                         <pointsize>22</pointsize>
+                         <bold>true</bold>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>⏸</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="6">
+                      <widget class="QComboBox" name="comboBox_4"/>
+                     </item>
+                     <item row="1" column="0" colspan="7">
+                      <widget class="QProgressBar" name="progressBar">
+                       <property name="value">
+                        <number>0</number>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="5">
+                      <widget class="QLabel" name="label_9">
+                       <property name="text">
+                        <string>Velocidad:</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="0">
+                      <widget class="QPushButton" name="pushButton_reproducir">
+                       <property name="minimumSize">
+                        <size>
+                         <width>0</width>
+                         <height>50</height>
+                        </size>
+                       </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>50</width>
+                         <height>16777215</height>
+                        </size>
+                       </property>
+                       <property name="font">
+                        <font>
+                         <family>Bahnschrift</family>
+                         <pointsize>22</pointsize>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>▶️</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="2">
+                      <widget class="QPushButton" name="pushButton_Reiniciar">
+                       <property name="minimumSize">
+                        <size>
+                         <width>0</width>
+                         <height>50</height>
+                        </size>
+                       </property>
+                       <property name="maximumSize">
+                        <size>
+                         <width>50</width>
+                         <height>16777215</height>
+                        </size>
+                       </property>
+                       <property name="font">
+                        <font>
+                         <pointsize>22</pointsize>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>🔄</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="3">
+                      <widget class="QLabel" name="label_8">
+                       <property name="text">
+                        <string>Tiempo:</string>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+               <item row="1" column="2">
+                <widget class="QPushButton" name="pushButton_Aplicar_preset">
+                 <property name="text">
+                  <string>Aplicar</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="groupBox_2">
+              <property name="title">
+               <string>Setup</string>
+              </property>
+              <layout class="QGridLayout" name="gridLayout_4">
+               <item row="0" column="4" rowspan="2">
+                <widget class="QGroupBox" name="groupBox_7">
+                 <property name="title">
+                  <string>Parámetros de función</string>
+                 </property>
+                 <layout class="QGridLayout" name="gridLayout_10">
+                  <item row="2" column="0" colspan="3">
+                   <widget class="QStackedWidget" name="stackedWidget">
+                    <property name="currentIndex">
+                     <number>4</number>
+                    </property>
+                    <widget class="QWidget" name="page">
+                     <layout class="QGridLayout" name="gridLayout_12">
+                      <item row="0" column="0">
+                       <widget class="QLabel" name="label_10">
+                        <property name="text">
+                         <string>Pendiente</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="1">
+                       <widget class="QDoubleSpinBox" name="doubleSpinBox_pendientegen"/>
+                      </item>
+                     </layout>
+                    </widget>
+                    <widget class="QWidget" name="page_2">
+                     <layout class="QGridLayout" name="gridLayout_13">
+                      <item row="1" column="0">
+                       <widget class="QLabel" name="label_11">
+                        <property name="text">
+                         <string>Amplitud</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="0" colspan="2">
+                       <spacer name="verticalSpacer">
+                        <property name="orientation">
+                         <enum>Qt::Orientation::Vertical</enum>
+                        </property>
+                        <property name="sizeHint" stdset="0">
+                         <size>
+                          <width>20</width>
+                          <height>40</height>
+                         </size>
+                        </property>
+                       </spacer>
+                      </item>
+                      <item row="2" column="0">
+                       <widget class="QLabel" name="label_12">
+                        <property name="text">
+                         <string>Frecuencia (Hz)</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="3" column="1">
+                       <widget class="QDoubleSpinBox" name="doubleSpinBox_Fase"/>
+                      </item>
+                      <item row="3" column="0">
+                       <widget class="QLabel" name="label_13">
+                        <property name="text">
+                         <string>Fase (°)</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="2" column="1">
+                       <widget class="QDoubleSpinBox" name="doubleSpinBox_frecuencia"/>
+                      </item>
+                      <item row="1" column="1">
+                       <widget class="QDoubleSpinBox" name="doubleSpinBox_amplitud"/>
+                      </item>
+                      <item row="4" column="0" colspan="2">
+                       <spacer name="verticalSpacer_2">
+                        <property name="orientation">
+                         <enum>Qt::Orientation::Vertical</enum>
+                        </property>
+                        <property name="sizeHint" stdset="0">
+                         <size>
+                          <width>20</width>
+                          <height>40</height>
+                         </size>
+                        </property>
+                       </spacer>
+                      </item>
+                     </layout>
+                    </widget>
+                    <widget class="QWidget" name="page_3">
+                     <layout class="QGridLayout" name="gridLayout_14">
+                      <item row="0" column="0" colspan="2">
+                       <widget class="QTableWidget" name="tableWidget_coeficientes"/>
+                      </item>
+                      <item row="1" column="0">
+                       <widget class="QPushButton" name="pushButton_ponercoeficiente">
+                        <property name="text">
+                         <string>+ Coeficiente</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="1" column="1">
+                       <widget class="QPushButton" name="pushButton_quitarcoeficiente">
+                        <property name="text">
+                         <string>- Coeficiente</string>
+                        </property>
+                       </widget>
+                      </item>
+                     </layout>
+                    </widget>
+                    <widget class="QWidget" name="page_4">
+                     <layout class="QGridLayout" name="gridLayout_15">
+                      <item row="1" column="1">
+                       <widget class="QSpinBox" name="spinBox_gradocurva"/>
+                      </item>
+                      <item row="1" column="0">
+                       <widget class="QLabel" name="label_19">
+                        <property name="text">
+                         <string>Grado de la curva</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="2" column="0" colspan="2">
+                       <widget class="QTableWidget" name="tableWidget_listapuntos"/>
+                      </item>
+                      <item row="3" column="0">
+                       <widget class="QPushButton" name="pushButton_ponerpunto">
+                        <property name="text">
+                         <string>+ Punto</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="3" column="1">
+                       <widget class="QPushButton" name="pushButton_quitarpunto">
+                        <property name="text">
+                         <string>- Punto</string>
+                        </property>
+                       </widget>
+                      </item>
+                     </layout>
+                    </widget>
+                    <widget class="QWidget" name="page_5">
+                     <layout class="QGridLayout" name="gridLayout_16">
+                      <item row="1" column="1">
+                       <widget class="QDoubleSpinBox" name="doubleSpinBox_pendientefin"/>
+                      </item>
+                      <item row="2" column="0" colspan="2">
+                       <widget class="QTableWidget" name="tableWidget_Listapuntosspline"/>
+                      </item>
+                      <item row="0" column="1">
+                       <widget class="QDoubleSpinBox" name="doubleSpinBox_pendienteini"/>
+                      </item>
+                      <item row="0" column="0">
+                       <widget class="QLabel" name="label_14">
+                        <property name="text">
+                         <string>Pendiente incial</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="3" column="0">
+                       <widget class="QPushButton" name="pushButton_ponerpuntospline">
+                        <property name="text">
+                         <string>+ Punto</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="3" column="1">
+                       <widget class="QPushButton" name="pushButton_quitarpuntospline">
+                        <property name="text">
+                         <string>- Punto</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="1" column="0">
+                       <widget class="QLabel" name="label_15">
+                        <property name="text">
+                         <string>Pendiente final</string>
+                        </property>
+                       </widget>
+                      </item>
+                     </layout>
+                    </widget>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+               <item row="0" column="3" rowspan="2">
+                <widget class="QGroupBox" name="groupBox_6">
+                 <property name="title">
+                  <string>Funciones de Movimiento</string>
+                 </property>
+                 <layout class="QGridLayout" name="gridLayout_9">
+                  <item row="4" column="0" colspan="2">
+                   <widget class="QPushButton" name="pushButton_reemplazarfuncion">
+                    <property name="text">
+                     <string>Reemplazar</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="3" column="1">
+                   <widget class="QComboBox" name="comboBox_tipodefuncion">
+                    <item>
+                     <property name="text">
+                      <string>Rampa lineal</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>Rampa cúbica</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>Cicloidal</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>Armónica</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>Sinusoidal</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>Sinusoidal modificada</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>Polinómica</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>Lista de puntos</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>Spline</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>Trapezoidal modificada</string>
+                     </property>
+                    </item>
+                   </widget>
+                  </item>
+                  <item row="1" column="0">
+                   <widget class="QPushButton" name="pushButton_ponerfuncion">
+                    <property name="text">
+                     <string>+ Funcion</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="2" column="0" colspan="2">
+                   <widget class="Line" name="line_2">
+                    <property name="orientation">
+                     <enum>Qt::Orientation::Horizontal</enum>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="3" column="0">
+                   <widget class="QLabel" name="label_7">
+                    <property name="text">
+                     <string>Tipo de funcion</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="1">
+                   <widget class="QPushButton" name="pushButton_quitarfuncion">
+                    <property name="text">
+                     <string>- Funcion</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="0" colspan="2">
+                   <widget class="QListWidget" name="listWidget_Ley">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="minimumSize">
+                     <size>
+                      <width>0</width>
+                      <height>150</height>
+                     </size>
+                    </property>
+                    <property name="maximumSize">
+                     <size>
+                      <width>16777215</width>
+                      <height>150</height>
+                     </size>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+               <item row="1" column="0">
+                <widget class="QGroupBox" name="groupBox_5">
+                 <property name="title">
+                  <string>Intervalo</string>
+                 </property>
+                 <layout class="QGridLayout" name="gridLayout_8">
+                  <item row="3" column="2">
+                   <widget class="QLabel" name="label_6">
+                    <property name="text">
+                     <string>Y₂</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="2">
+                   <widget class="QLabel" name="label_4">
+                    <property name="text">
+                     <string>Y₁</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="3" column="0">
+                   <widget class="QLabel" name="label_5">
+                    <property name="text">
+                     <string>t₂</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="3" column="3">
+                   <widget class="QDoubleSpinBox" name="doubleSpinBox_yfin"/>
+                  </item>
+                  <item row="3" column="1">
+                   <widget class="QDoubleSpinBox" name="doubleSpinBox_tiempofin"/>
+                  </item>
+                  <item row="0" column="3">
+                   <widget class="QDoubleSpinBox" name="doubleSpinBox_yini"/>
+                  </item>
+                  <item row="0" column="1">
+                   <widget class="QDoubleSpinBox" name="doubleSpinBox_tiempoini"/>
+                  </item>
+                  <item row="0" column="0">
+                   <widget class="QLabel" name="label_3">
+                    <property name="text">
+                     <string>t₁</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="0" colspan="4">
+                   <widget class="Line" name="line">
+                    <property name="orientation">
+                     <enum>Qt::Orientation::Horizontal</enum>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+               <item row="0" column="0">
+                <widget class="QGroupBox" name="groupBox_4">
+                 <property name="title">
+                  <string>Tramos</string>
+                 </property>
+                 <layout class="QGridLayout" name="gridLayout_7">
+                  <item row="0" column="0" colspan="2">
+                   <widget class="QListWidget" name="listWidget_tramo">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="minimumSize">
+                     <size>
+                      <width>0</width>
+                      <height>150</height>
+                     </size>
+                    </property>
+                    <property name="maximumSize">
+                     <size>
+                      <width>16777215</width>
+                      <height>150</height>
+                     </size>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="1">
+                   <widget class="QPushButton" name="pushButton_quitartramo">
+                    <property name="text">
+                     <string>- Tramo</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="0">
+                   <widget class="QPushButton" name="pushButton_ponertramo">
+                    <property name="text">
+                     <string>+ Tramo</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <spacer name="espacioCinematicoFinal">
+              <property name="orientation">
+               <enum>Qt::Orientation::Vertical</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>24</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </widget>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="tabDinamico">
+       <attribute name="title">
+        <string>Régimen dinámico / contacto</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="layoutDinamicoPrincipal">
+        <item>
+         <widget class="QGroupBox" name="groupEstudioActivo">
+          <property name="title">
+           <string>Estudio físico asociado al perfil</string>
           </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Backlash</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Giro de 90°</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Giro de 180°</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Indexer</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Lavadora</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Vibrador</string>
-          </property>
-         </item>
-        </widget>
-       </item>
-       <item row="1" column="5" rowspan="2">
-        <widget class="QFrame" name="frame">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="minimumSize">
-          <size>
-           <width>0</width>
-           <height>370</height>
-          </size>
-         </property>
-         <property name="frameShape">
-          <enum>QFrame::Shape::StyledPanel</enum>
-         </property>
-         <property name="frameShadow">
-          <enum>QFrame::Shadow::Raised</enum>
-         </property>
-         <layout class="QGridLayout" name="gridLayout">
-          <item row="0" column="0" colspan="2">
-           <widget class="QWidget" name="widget_grafica" native="true">
-            <property name="contextMenuPolicy">
-             <enum>Qt::ContextMenuPolicy::CustomContextMenu</enum>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QGroupBox" name="groupBox">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="title">
-             <string>Mostrar curvas</string>
-            </property>
-            <layout class="QGridLayout" name="gridLayout_3">
-             <item row="0" column="1">
-              <widget class="QCheckBox" name="checkBox_Velocidad">
+          <layout class="QVBoxLayout" name="layoutEstudioActivo">
+           <item>
+            <layout class="QHBoxLayout" name="filaEscenarioPreset">
+             <item>
+              <widget class="QLabel" name="lblEscenarioPreset">
                <property name="text">
-                <string>Velocidad Angular</string>
+                <string>Escenario:</string>
                </property>
               </widget>
              </item>
-             <item row="0" column="0">
-              <widget class="QCheckBox" name="checkBox_Posicion">
+             <item>
+              <widget class="QComboBox" name="comboEscenarioDinamico">
+               <property name="minimumSize">
+                <size>
+                 <width>190</width>
+                 <height>0</height>
+                </size>
+               </property>
+               <item>
+                <property name="text">
+                 <string>Personalizado (sin carga externa)</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>Escenario asociado al preset</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>Nuevo escenario…</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="btnGuardarEscenario">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="toolTip">
+                <string>Guardar configuración del estudio; conectar desde Python.</string>
+               </property>
                <property name="text">
-                <string>Posición Angular</string>
+                <string>Guardar escenario…</string>
                </property>
               </widget>
              </item>
-             <item row="0" column="2">
-              <widget class="QCheckBox" name="checkBox_Aceleracion">
+             <item>
+              <widget class="QPushButton" name="btnRestaurarEscenario">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="toolTip">
+                <string>Pendiente de implementación en Python.</string>
+               </property>
                <property name="text">
-                <string>Aceleración Angular</string>
+                <string>Restablecer</string>
                </property>
               </widget>
              </item>
             </layout>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <widget class="QSplitter" name="splitConfiguracionYResultados">
+          <property name="orientation">
+           <enum>Qt::Orientation::Horizontal</enum>
+          </property>
+          <widget class="QWidget" name="panelConfiguracionDinamica">
+           <layout class="QVBoxLayout" name="layoutPanelConfiguracionDinamica">
+            <item>
+             <widget class="QLabel" name="lblSubtituloConfig">
+              <property name="text">
+               <string>Configuración del estudio</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="layoutSelectorParametros">
+              <item>
+               <widget class="QListWidget" name="listSeccionesEstudio">
+                <property name="minimumSize">
+                 <size>
+                  <width>140</width>
+                  <height>280</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>170</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="currentRow">
+                 <number>0</number>
+                </property>
+                <item>
+                 <property name="text">
+                  <string>Accionamiento</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Cargas externas</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Contacto</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Solucionador</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+              <item>
+               <widget class="QStackedWidget" name="stackConfiguracion">
+                <property name="currentIndex">
+                 <number>0</number>
+                </property>
+                <widget class="QWidget" name="pageAccionamiento">
+                 <layout class="QVBoxLayout" name="layoutScrollMotor">
+                  <item>
+                   <widget class="QScrollArea" name="scrollPaginaMotor">
+                    <property name="widgetResizable">
+                     <bool>true</bool>
+                    </property>
+                    <widget class="QWidget" name="contenidoScrollMotor">
+                     <property name="geometry">
+                      <rect>
+                       <x>0</x>
+                       <y>0</y>
+                       <width>662</width>
+                       <height>550</height>
+                      </rect>
+                     </property>
+                     <layout class="QVBoxLayout" name="layoutPaginaAccionamiento">
+                      <item>
+                       <layout class="QHBoxLayout" name="comboTipoMotorFila">
+                        <item>
+                         <widget class="QLabel" name="lblComboTipoMotor">
+                          <property name="text">
+                           <string>Tipo de motor</string>
+                          </property>
+                          <property name="wordWrap">
+                           <bool>true</bool>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QComboBox" name="comboTipoMotor">
+                          <item>
+                           <property name="text">
+                            <string>Stepper</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>AC — 4 polos, 50 Hz (1500 rpm síncronas)</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>Custom — parametrización obligatoria</string>
+                           </property>
+                          </item>
+                         </widget>
+                        </item>
+                       </layout>
+                      </item>
+                      <item>
+                       <layout class="QHBoxLayout" name="comboModoAccionamientoFila">
+                        <item>
+                         <widget class="QLabel" name="lblComboModoAccionamiento">
+                          <property name="text">
+                           <string>Modo de evaluación</string>
+                          </property>
+                          <property name="wordWrap">
+                           <bool>true</bool>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QComboBox" name="comboModoAccionamiento">
+                          <item>
+                           <property name="text">
+                            <string>Movimiento impuesto</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>Evaluación de capacidad del motor</string>
+                           </property>
+                          </item>
+                         </widget>
+                        </item>
+                       </layout>
+                      </item>
+                      <item>
+                       <layout class="QHBoxLayout" name="spinPotenciaNominalFila">
+                        <item>
+                         <widget class="QLabel" name="lblSpinPotenciaNominal">
+                          <property name="text">
+                           <string>Potencia mecánica nominal</string>
+                          </property>
+                          <property name="wordWrap">
+                           <bool>true</bool>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QDoubleSpinBox" name="spinPotenciaNominal">
+                          <property name="suffix">
+                           <string> W</string>
+                          </property>
+                          <property name="decimals">
+                           <number>3</number>
+                          </property>
+                          <property name="minimum">
+                           <double>0.000000000000000</double>
+                          </property>
+                          <property name="maximum">
+                           <double>1000000000.000000000000000</double>
+                          </property>
+                          <property name="singleStep">
+                           <double>0.001000000000000</double>
+                          </property>
+                         </widget>
+                        </item>
+                       </layout>
+                      </item>
+                      <item>
+                       <layout class="QHBoxLayout" name="spinVelocidadNominalFila">
+                        <item>
+                         <widget class="QLabel" name="lblSpinVelocidadNominal">
+                          <property name="text">
+                           <string>Velocidad nominal</string>
+                          </property>
+                          <property name="wordWrap">
+                           <bool>true</bool>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QDoubleSpinBox" name="spinVelocidadNominal">
+                          <property name="suffix">
+                           <string> rpm</string>
+                          </property>
+                          <property name="decimals">
+                           <number>3</number>
+                          </property>
+                          <property name="minimum">
+                           <double>0.000000000000000</double>
+                          </property>
+                          <property name="maximum">
+                           <double>100000.000000000000000</double>
+                          </property>
+                          <property name="singleStep">
+                           <double>0.001000000000000</double>
+                          </property>
+                         </widget>
+                        </item>
+                       </layout>
+                      </item>
+                      <item>
+                       <layout class="QHBoxLayout" name="spinParRetencionFila">
+                        <item>
+                         <widget class="QLabel" name="lblSpinParRetencion">
+                          <property name="text">
+                           <string>Par de retención (Stepper)</string>
+                          </property>
+                          <property name="wordWrap">
+                           <bool>true</bool>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QDoubleSpinBox" name="spinParRetencion">
+                          <property name="suffix">
+                           <string> N·m</string>
+                          </property>
+                          <property name="decimals">
+                           <number>3</number>
+                          </property>
+                          <property name="minimum">
+                           <double>0.000000000000000</double>
+                          </property>
+                          <property name="maximum">
+                           <double>1000000000.000000000000000</double>
+                          </property>
+                          <property name="singleStep">
+                           <double>0.001000000000000</double>
+                          </property>
+                         </widget>
+                        </item>
+                       </layout>
+                      </item>
+                      <item>
+                       <layout class="QHBoxLayout" name="spinFrecuenciaRedFila">
+                        <item>
+                         <widget class="QLabel" name="lblSpinFrecuenciaRed">
+                          <property name="text">
+                           <string>Frecuencia de red (AC)</string>
+                          </property>
+                          <property name="wordWrap">
+                           <bool>true</bool>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QDoubleSpinBox" name="spinFrecuenciaRed">
+                          <property name="suffix">
+                           <string> Hz</string>
+                          </property>
+                          <property name="decimals">
+                           <number>1</number>
+                          </property>
+                          <property name="minimum">
+                           <double>0.000000000000000</double>
+                          </property>
+                          <property name="maximum">
+                           <double>1000.000000000000000</double>
+                          </property>
+                          <property name="singleStep">
+                           <double>0.100000000000000</double>
+                          </property>
+                          <property name="value">
+                           <double>50.000000000000000</double>
+                          </property>
+                         </widget>
+                        </item>
+                       </layout>
+                      </item>
+                      <item>
+                       <layout class="QHBoxLayout" name="spinNumeroPolosFila">
+                        <item>
+                         <widget class="QLabel" name="lblSpinNumeroPolos">
+                          <property name="text">
+                           <string>Número de polos (AC)</string>
+                          </property>
+                          <property name="wordWrap">
+                           <bool>true</bool>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QSpinBox" name="spinNumeroPolos">
+                          <property name="minimum">
+                           <number>2</number>
+                          </property>
+                          <property name="maximum">
+                           <number>40</number>
+                          </property>
+                          <property name="value">
+                           <number>4</number>
+                          </property>
+                         </widget>
+                        </item>
+                       </layout>
+                      </item>
+                      <item>
+                       <widget class="QGroupBox" name="groupCurvaCaracteristica">
+                        <property name="title">
+                         <string>Curva par–velocidad del motor</string>
+                        </property>
+                        <layout class="QVBoxLayout" name="groupCurvaCaracteristicaLayout">
+                         <item>
+                          <widget class="QTableWidget" name="tablaCurvaMotor">
+                           <property name="minimumSize">
+                            <size>
+                             <width>0</width>
+                             <height>145</height>
+                            </size>
+                           </property>
+                           <column>
+                            <property name="text">
+                             <string>Velocidad (rpm)</string>
+                            </property>
+                           </column>
+                           <column>
+                            <property name="text">
+                             <string>Par disponible (N·m)</string>
+                            </property>
+                           </column>
+                          </widget>
+                         </item>
+                         <item>
+                          <layout class="QHBoxLayout" name="layoutAccionesCurvaMotor">
+                           <item>
+                            <widget class="QPushButton" name="btnAgregarPuntoMotor">
+                             <property name="enabled">
+                              <bool>false</bool>
+                             </property>
+                             <property name="text">
+                              <string>+ Punto</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item>
+                            <widget class="QPushButton" name="btnQuitarPuntoMotor">
+                             <property name="enabled">
+                              <bool>false</bool>
+                             </property>
+                             <property name="text">
+                              <string>− Punto</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item>
+                            <widget class="QPushButton" name="btnImportarCurvaMotor">
+                             <property name="enabled">
+                              <bool>false</bool>
+                             </property>
+                             <property name="text">
+                              <string>Importar CSV…</string>
+                             </property>
+                            </widget>
+                           </item>
+                          </layout>
+                         </item>
+                        </layout>
+                       </widget>
+                      </item>
+                      <item>
+                       <spacer name="espacioMotor">
+                        <property name="orientation">
+                         <enum>Qt::Orientation::Vertical</enum>
+                        </property>
+                        <property name="sizeHint" stdset="0">
+                         <size>
+                          <width>20</width>
+                          <height>24</height>
+                         </size>
+                        </property>
+                       </spacer>
+                      </item>
+                     </layout>
+                    </widget>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+                <widget class="QWidget" name="pageCargasExternas">
+                 <layout class="QVBoxLayout" name="layoutScrollCarga">
+                  <item>
+                   <widget class="QScrollArea" name="scrollPaginaCarga">
+                    <property name="widgetResizable">
+                     <bool>true</bool>
+                    </property>
+                    <widget class="QWidget" name="contenidoScrollCarga">
+                     <property name="geometry">
+                      <rect>
+                       <x>0</x>
+                       <y>0</y>
+                       <width>674</width>
+                       <height>544</height>
+                      </rect>
+                     </property>
+                     <layout class="QVBoxLayout" name="layoutPaginaCargas">
+                      <item>
+                       <widget class="QLabel" name="lblTituloCargas">
+                        <property name="text">
+                         <string>Cargas externas · perfiles editables</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <layout class="QHBoxLayout" name="comboDependenciaParFila">
+                        <item>
+                         <widget class="QLabel" name="lblComboDependenciaPar">
+                          <property name="text">
+                           <string>Variable independiente</string>
+                          </property>
+                          <property name="wordWrap">
+                           <bool>true</bool>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QComboBox" name="comboDependenciaPar">
+                          <item>
+                           <property name="text">
+                            <string>Tiempo — T(t)</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>Posición angular — T(θ)</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>Velocidad angular — T(ω)</string>
+                           </property>
+                          </item>
+                         </widget>
+                        </item>
+                       </layout>
+                      </item>
+                      <item>
+                       <layout class="QHBoxLayout" name="comboTipoLeyCargaFila">
+                        <item>
+                         <widget class="QLabel" name="lblComboTipoLeyCarga">
+                          <property name="text">
+                           <string>Ley del perfil</string>
+                          </property>
+                          <property name="wordWrap">
+                           <bool>true</bool>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QComboBox" name="comboTipoLeyCarga">
+                          <item>
+                           <property name="text">
+                            <string>Constante</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>Rampa lineal</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>Rampa cúbica</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>Cicloidal</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>Armónica</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>Sinusoidal</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>Sinusoidal modificada</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>Polinómica</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>Lista de puntos</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>Spline</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>Trapezoidal modificada</string>
+                           </property>
+                          </item>
+                         </widget>
+                        </item>
+                       </layout>
+                      </item>
+                      <item>
+                       <layout class="QHBoxLayout" name="comboComponenteCargaFila">
+                        <item>
+                         <widget class="QLabel" name="lblComboComponenteCarga">
+                          <property name="text">
+                           <string>Aplicación de carga</string>
+                          </property>
+                          <property name="wordWrap">
+                           <bool>true</bool>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QComboBox" name="comboComponenteCarga">
+                          <item>
+                           <property name="text">
+                            <string>Componente de salida</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>Eje de entrada</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>Seleccionar componente…</string>
+                           </property>
+                          </item>
+                         </widget>
+                        </item>
+                       </layout>
+                      </item>
+                      <item>
+                       <layout class="QHBoxLayout" name="spinParResistenteFila">
+                        <item>
+                         <widget class="QLabel" name="lblSpinParResistente">
+                          <property name="text">
+                           <string>Par resistente constante</string>
+                          </property>
+                          <property name="wordWrap">
+                           <bool>true</bool>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QDoubleSpinBox" name="spinParResistente">
+                          <property name="suffix">
+                           <string> N·m</string>
+                          </property>
+                          <property name="decimals">
+                           <number>4</number>
+                          </property>
+                          <property name="minimum">
+                           <double>-1000000000.000000000000000</double>
+                          </property>
+                          <property name="maximum">
+                           <double>1000000000.000000000000000</double>
+                          </property>
+                          <property name="singleStep">
+                           <double>0.001000000000000</double>
+                          </property>
+                         </widget>
+                        </item>
+                       </layout>
+                      </item>
+                      <item>
+                       <widget class="QTableWidget" name="tablaPuntosCarga">
+                        <property name="minimumSize">
+                         <size>
+                          <width>0</width>
+                          <height>185</height>
+                         </size>
+                        </property>
+                        <column>
+                         <property name="text">
+                          <string>Abscisa (t, θ o ω)</string>
+                         </property>
+                        </column>
+                        <column>
+                         <property name="text">
+                          <string>Par (N·m)</string>
+                         </property>
+                        </column>
+                       </widget>
+                      </item>
+                      <item>
+                       <layout class="QHBoxLayout" name="layoutBotonesCarga">
+                        <item>
+                         <widget class="QPushButton" name="btnAgregarPuntoCarga">
+                          <property name="enabled">
+                           <bool>false</bool>
+                          </property>
+                          <property name="text">
+                           <string>+ Punto</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QPushButton" name="btnQuitarPuntoCarga">
+                          <property name="enabled">
+                           <bool>false</bool>
+                          </property>
+                          <property name="text">
+                           <string>− Punto</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QPushButton" name="btnImportarCarga">
+                          <property name="enabled">
+                           <bool>false</bool>
+                          </property>
+                          <property name="text">
+                           <string>Importar…</string>
+                          </property>
+                         </widget>
+                        </item>
+                       </layout>
+                      </item>
+                      <item>
+                       <spacer name="espacioCargas">
+                        <property name="orientation">
+                         <enum>Qt::Orientation::Vertical</enum>
+                        </property>
+                        <property name="sizeHint" stdset="0">
+                         <size>
+                          <width>20</width>
+                          <height>24</height>
+                         </size>
+                        </property>
+                       </spacer>
+                      </item>
+                     </layout>
+                    </widget>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+                <widget class="QWidget" name="pageContacto">
+                 <layout class="QVBoxLayout" name="layoutScrollContacto">
+                  <item>
+                   <widget class="QScrollArea" name="scrollPaginaContacto">
+                    <property name="widgetResizable">
+                     <bool>true</bool>
+                    </property>
+                    <widget class="QWidget" name="contenidoScrollContacto">
+                     <property name="geometry">
+                      <rect>
+                       <x>0</x>
+                       <y>0</y>
+                       <width>674</width>
+                       <height>544</height>
+                      </rect>
+                     </property>
+                     <layout class="QVBoxLayout" name="layoutPaginaContacto">
+                      <item>
+                       <layout class="QHBoxLayout" name="comboModeloContactoFila">
+                        <item>
+                         <widget class="QLabel" name="lblComboModeloContacto">
+                          <property name="text">
+                           <string>Formulación normal</string>
+                          </property>
+                          <property name="wordWrap">
+                           <bool>true</bool>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QComboBox" name="comboModeloContacto">
+                          <item>
+                           <property name="text">
+                            <string>Equilibrio unilateral / complementariedad</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>Penalización elástica unilateral</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>Solo análisis geométrico</string>
+                           </property>
+                          </item>
+                         </widget>
+                        </item>
+                       </layout>
+                      </item>
+                      <item>
+                       <layout class="QHBoxLayout" name="spinRigidezNormalFila">
+                        <item>
+                         <widget class="QLabel" name="lblSpinRigidezNormal">
+                          <property name="text">
+                           <string>Rigidez normal equivalente</string>
+                          </property>
+                          <property name="wordWrap">
+                           <bool>true</bool>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QDoubleSpinBox" name="spinRigidezNormal">
+                          <property name="suffix">
+                           <string> N/mm</string>
+                          </property>
+                          <property name="decimals">
+                           <number>3</number>
+                          </property>
+                          <property name="minimum">
+                           <double>0.000000000000000</double>
+                          </property>
+                          <property name="maximum">
+                           <double>1000000000000.000000000000000</double>
+                          </property>
+                          <property name="singleStep">
+                           <double>0.001000000000000</double>
+                          </property>
+                         </widget>
+                        </item>
+                       </layout>
+                      </item>
+                      <item>
+                       <layout class="QHBoxLayout" name="spinToleranciaBrechaFila">
+                        <item>
+                         <widget class="QLabel" name="lblSpinToleranciaBrecha">
+                          <property name="text">
+                           <string>Tolerancia geométrica de brecha</string>
+                          </property>
+                          <property name="wordWrap">
+                           <bool>true</bool>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QDoubleSpinBox" name="spinToleranciaBrecha">
+                          <property name="suffix">
+                           <string> mm</string>
+                          </property>
+                          <property name="decimals">
+                           <number>6</number>
+                          </property>
+                          <property name="minimum">
+                           <double>0.000000000000000</double>
+                          </property>
+                          <property name="maximum">
+                           <double>1.000000000000000</double>
+                          </property>
+                          <property name="singleStep">
+                           <double>0.100000000000000</double>
+                          </property>
+                          <property name="value">
+                           <double>0.001000000000000</double>
+                          </property>
+                         </widget>
+                        </item>
+                       </layout>
+                      </item>
+                      <item>
+                       <widget class="QCheckBox" name="chkRepartoMulticontacto">
+                        <property name="text">
+                         <string>Resolver reparto entre contactos activos</string>
+                        </property>
+                        <property name="checked">
+                         <bool>true</bool>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <widget class="QCheckBox" name="chkRegistrarContactos">
+                        <property name="text">
+                         <string>Registrar todos los contactos y sus normales</string>
+                        </property>
+                        <property name="checked">
+                         <bool>true</bool>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <widget class="QCheckBox" name="chkIncluirFriccion">
+                        <property name="enabled">
+                         <bool>false</bool>
+                        </property>
+                        <property name="text">
+                         <string>Fricción tangencial (pendiente de modelo)</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <layout class="QHBoxLayout" name="spinAmortiguamientoNormalFila">
+                        <item>
+                         <widget class="QLabel" name="lblSpinAmortiguamientoNormal">
+                          <property name="text">
+                           <string>Amortiguamiento normal (transitorio)</string>
+                          </property>
+                          <property name="wordWrap">
+                           <bool>true</bool>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QDoubleSpinBox" name="spinAmortiguamientoNormal">
+                          <property name="enabled">
+                           <bool>false</bool>
+                          </property>
+                          <property name="suffix">
+                           <string> N·s/mm</string>
+                          </property>
+                          <property name="decimals">
+                           <number>4</number>
+                          </property>
+                          <property name="minimum">
+                           <double>0.000000000000000</double>
+                          </property>
+                          <property name="maximum">
+                           <double>1000000000000.000000000000000</double>
+                          </property>
+                          <property name="singleStep">
+                           <double>0.001000000000000</double>
+                          </property>
+                         </widget>
+                        </item>
+                       </layout>
+                      </item>
+                      <item>
+                       <widget class="QGroupBox" name="groupComponentesEstudio">
+                        <property name="title">
+                         <string>Componentes y restricciones</string>
+                        </property>
+                        <layout class="QVBoxLayout" name="groupComponentesEstudioLayout">
+                         <item>
+                          <widget class="QTableWidget" name="tablaComponentesContacto">
+                           <property name="minimumSize">
+                            <size>
+                             <width>0</width>
+                             <height>155</height>
+                            </size>
+                           </property>
+                           <column>
+                            <property name="text">
+                             <string>Componente</string>
+                            </property>
+                           </column>
+                           <column>
+                            <property name="text">
+                             <string>Vínculo</string>
+                            </property>
+                           </column>
+                           <column>
+                            <property name="text">
+                             <string>Contactos activos</string>
+                            </property>
+                           </column>
+                          </widget>
+                         </item>
+                        </layout>
+                       </widget>
+                      </item>
+                      <item>
+                       <spacer name="espacioContacto">
+                        <property name="orientation">
+                         <enum>Qt::Orientation::Vertical</enum>
+                        </property>
+                        <property name="sizeHint" stdset="0">
+                         <size>
+                          <width>20</width>
+                          <height>24</height>
+                         </size>
+                        </property>
+                       </spacer>
+                      </item>
+                     </layout>
+                    </widget>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+                <widget class="QWidget" name="pageSolucionador">
+                 <layout class="QVBoxLayout" name="layoutScrollSolucionador">
+                  <item>
+                   <widget class="QScrollArea" name="scrollPaginaSolucionador">
+                    <property name="widgetResizable">
+                     <bool>true</bool>
+                    </property>
+                    <widget class="QWidget" name="contenidoScrollSolucionador">
+                     <property name="geometry">
+                      <rect>
+                       <x>0</x>
+                       <y>0</y>
+                       <width>674</width>
+                       <height>544</height>
+                      </rect>
+                     </property>
+                     <layout class="QVBoxLayout" name="layoutPaginaSolucionador">
+                      <item>
+                       <widget class="QLabel" name="lblTituloSolucionador">
+                        <property name="text">
+                         <string>Resolución · precisión y diagnóstico</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <layout class="QHBoxLayout" name="comboMetodoSolucionFila">
+                        <item>
+                         <widget class="QLabel" name="lblComboMetodoSolucion">
+                          <property name="text">
+                           <string>Método</string>
+                          </property>
+                          <property name="wordWrap">
+                           <bool>true</bool>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QComboBox" name="comboMetodoSolucion">
+                          <item>
+                           <property name="text">
+                            <string>Equilibrio cuasiestático por posición</string>
+                           </property>
+                          </item>
+                         </widget>
+                        </item>
+                       </layout>
+                      </item>
+                      <item>
+                       <layout class="QHBoxLayout" name="comboMuestreoEstudioFila">
+                        <item>
+                         <widget class="QLabel" name="lblComboMuestreoEstudio">
+                          <property name="text">
+                           <string>Discretización</string>
+                          </property>
+                          <property name="wordWrap">
+                           <bool>true</bool>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QComboBox" name="comboMuestreoEstudio">
+                          <item>
+                           <property name="text">
+                            <string>Usar estrategia de Ajustes</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>Uniforme por muestras</string>
+                           </property>
+                          </item>
+                          <item>
+                           <property name="text">
+                            <string>Adaptativa por tolerancia</string>
+                           </property>
+                          </item>
+                         </widget>
+                        </item>
+                       </layout>
+                      </item>
+                      <item>
+                       <layout class="QHBoxLayout" name="spinToleranciaEquilibrioFila">
+                        <item>
+                         <widget class="QLabel" name="lblSpinToleranciaEquilibrio">
+                          <property name="text">
+                           <string>Tolerancia de equilibrio</string>
+                          </property>
+                          <property name="wordWrap">
+                           <bool>true</bool>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QDoubleSpinBox" name="spinToleranciaEquilibrio">
+                          <property name="suffix">
+                           <string> N</string>
+                          </property>
+                          <property name="decimals">
+                           <number>7</number>
+                          </property>
+                          <property name="minimum">
+                           <double>0.000000000000000</double>
+                          </property>
+                          <property name="maximum">
+                           <double>1000000.000000000000000</double>
+                          </property>
+                          <property name="singleStep">
+                           <double>0.100000000000000</double>
+                          </property>
+                          <property name="value">
+                           <double>0.000001000000000</double>
+                          </property>
+                         </widget>
+                        </item>
+                       </layout>
+                      </item>
+                      <item>
+                       <layout class="QHBoxLayout" name="spinToleranciaMomentoFila">
+                        <item>
+                         <widget class="QLabel" name="lblSpinToleranciaMomento">
+                          <property name="text">
+                           <string>Tolerancia de momento</string>
+                          </property>
+                          <property name="wordWrap">
+                           <bool>true</bool>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QDoubleSpinBox" name="spinToleranciaMomento">
+                          <property name="suffix">
+                           <string> N·mm</string>
+                          </property>
+                          <property name="decimals">
+                           <number>7</number>
+                          </property>
+                          <property name="minimum">
+                           <double>0.000000000000000</double>
+                          </property>
+                          <property name="maximum">
+                           <double>1000000000.000000000000000</double>
+                          </property>
+                          <property name="singleStep">
+                           <double>0.100000000000000</double>
+                          </property>
+                          <property name="value">
+                           <double>0.000001000000000</double>
+                          </property>
+                         </widget>
+                        </item>
+                       </layout>
+                      </item>
+                      <item>
+                       <layout class="QHBoxLayout" name="spinMaxIteracionesFila">
+                        <item>
+                         <widget class="QLabel" name="lblSpinMaxIteraciones">
+                          <property name="text">
+                           <string>Máximo de iteraciones</string>
+                          </property>
+                          <property name="wordWrap">
+                           <bool>true</bool>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QSpinBox" name="spinMaxIteraciones">
+                          <property name="minimum">
+                           <number>1</number>
+                          </property>
+                          <property name="maximum">
+                           <number>100000</number>
+                          </property>
+                          <property name="value">
+                           <number>200</number>
+                          </property>
+                         </widget>
+                        </item>
+                       </layout>
+                      </item>
+                      <item>
+                       <widget class="QCheckBox" name="chkPararNoConvergencia">
+                        <property name="text">
+                         <string>Detener ante falta de convergencia</string>
+                        </property>
+                        <property name="checked">
+                         <bool>true</bool>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <widget class="QCheckBox" name="chkInformarResultadosIndeterminados">
+                        <property name="text">
+                         <string>Identificar estados físicamente indeterminados</string>
+                        </property>
+                        <property name="checked">
+                         <bool>true</bool>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <widget class="QCheckBox" name="chkGuardarDiagnosticos">
+                        <property name="text">
+                         <string>Registrar residuos de equilibrio</string>
+                        </property>
+                        <property name="checked">
+                         <bool>true</bool>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <spacer name="espacioSolucionador">
+                        <property name="orientation">
+                         <enum>Qt::Orientation::Vertical</enum>
+                        </property>
+                        <property name="sizeHint" stdset="0">
+                         <size>
+                          <width>20</width>
+                          <height>24</height>
+                         </size>
+                        </property>
+                       </spacer>
+                      </item>
+                     </layout>
+                    </widget>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </widget>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="panelGraficasDinamicas">
+           <layout class="QVBoxLayout" name="layoutPanelGraficasDinamicas">
+            <item>
+             <widget class="QLabel" name="lblTituloGraficasEstudio">
+              <property name="text">
+               <string>Gráficas y resultados del estudio</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QTabWidget" name="tabGraficasEstudio">
+              <property name="currentIndex">
+               <number>0</number>
+              </property>
+              <widget class="QWidget" name="tabParTiempo">
+               <attribute name="title">
+                <string>T(t)</string>
+               </attribute>
+               <layout class="QVBoxLayout" name="layoutTabParTiempo">
+                <item>
+                 <widget class="QWidget" name="widgetGraficaTabParTiempo" native="true">
+                  <property name="minimumSize">
+                   <size>
+                    <width>100</width>
+                    <height>400</height>
+                   </size>
+                  </property>
+                  <property name="toolTip">
+                   <string>Contenedor para PlotWidget de PyQtGraph: crear e insertar desde Python.</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <layout class="QHBoxLayout" name="layoutVisibilidadTabParTiempo">
+                  <item>
+                   <widget class="QCheckBox" name="chkMostrarPrescritaTabParTiempo">
+                    <property name="text">
+                     <string>Perfil impuesto</string>
+                    </property>
+                    <property name="checked">
+                     <bool>true</bool>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QCheckBox" name="chkMostrarCalculadaTabParTiempo">
+                    <property name="text">
+                     <string>Resultado calculado</string>
+                    </property>
+                    <property name="checked">
+                     <bool>true</bool>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="tabParAngulo">
+               <attribute name="title">
+                <string>T(θ)</string>
+               </attribute>
+               <layout class="QVBoxLayout" name="layoutTabParAngulo">
+                <item>
+                 <widget class="QWidget" name="widgetGraficaTabParAngulo" native="true">
+                  <property name="minimumSize">
+                   <size>
+                    <width>100</width>
+                    <height>400</height>
+                   </size>
+                  </property>
+                  <property name="toolTip">
+                   <string>Contenedor para PlotWidget de PyQtGraph: crear e insertar desde Python.</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <layout class="QHBoxLayout" name="layoutVisibilidadTabParAngulo">
+                  <item>
+                   <widget class="QCheckBox" name="chkMostrarPrescritaTabParAngulo">
+                    <property name="text">
+                     <string>Perfil impuesto</string>
+                    </property>
+                    <property name="checked">
+                     <bool>true</bool>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QCheckBox" name="chkMostrarCalculadaTabParAngulo">
+                    <property name="text">
+                     <string>Resultado calculado</string>
+                    </property>
+                    <property name="checked">
+                     <bool>true</bool>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="tabParVelocidad">
+               <attribute name="title">
+                <string>T(ω)</string>
+               </attribute>
+               <layout class="QVBoxLayout" name="layoutTabParVelocidad">
+                <item>
+                 <widget class="QWidget" name="widgetGraficaTabParVelocidad" native="true">
+                  <property name="minimumSize">
+                   <size>
+                    <width>100</width>
+                    <height>400</height>
+                   </size>
+                  </property>
+                  <property name="toolTip">
+                   <string>Contenedor para PlotWidget de PyQtGraph: crear e insertar desde Python.</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <layout class="QHBoxLayout" name="layoutVisibilidadTabParVelocidad">
+                  <item>
+                   <widget class="QCheckBox" name="chkMostrarPrescritaTabParVelocidad">
+                    <property name="text">
+                     <string>Perfil impuesto</string>
+                    </property>
+                    <property name="checked">
+                     <bool>true</bool>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QCheckBox" name="chkMostrarCalculadaTabParVelocidad">
+                    <property name="text">
+                     <string>Resultado calculado</string>
+                    </property>
+                    <property name="checked">
+                     <bool>true</bool>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="tabResultadosDinamicos">
+               <attribute name="title">
+                <string>Resultados</string>
+               </attribute>
+               <layout class="QVBoxLayout" name="layoutResultadosDinamicos">
+                <item>
+                 <widget class="QTabWidget" name="tabTipoResultado">
+                  <property name="currentIndex">
+                   <number>0</number>
+                  </property>
+                  <widget class="QWidget" name="tabFuerzasContacto">
+                   <attribute name="title">
+                    <string>Fuerzas</string>
+                   </attribute>
+                   <layout class="QVBoxLayout" name="layoutTabFuerzasContacto">
+                    <item>
+                     <widget class="QWidget" name="widgetGraficaTabFuerzasContacto" native="true">
+                      <property name="minimumSize">
+                       <size>
+                        <width>100</width>
+                        <height>400</height>
+                       </size>
+                      </property>
+                      <property name="toolTip">
+                       <string>Contenedor para PlotWidget de PyQtGraph: crear e insertar desde Python.</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QTableWidget" name="tablaTabFuerzasContacto">
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>135</height>
+                       </size>
+                      </property>
+                      <column>
+                       <property name="text">
+                        <string>t (s)</string>
+                       </property>
+                      </column>
+                      <column>
+                       <property name="text">
+                        <string>Contacto</string>
+                       </property>
+                      </column>
+                      <column>
+                       <property name="text">
+                        <string>Fn (N)</string>
+                       </property>
+                      </column>
+                      <column>
+                       <property name="text">
+                        <string>Fr (N)</string>
+                       </property>
+                      </column>
+                      <column>
+                       <property name="text">
+                        <string>Ft (N)</string>
+                       </property>
+                      </column>
+                     </widget>
+                    </item>
+                   </layout>
+                  </widget>
+                  <widget class="QWidget" name="tabMomentos">
+                   <attribute name="title">
+                    <string>Momentos</string>
+                   </attribute>
+                   <layout class="QVBoxLayout" name="layoutTabMomentos">
+                    <item>
+                     <widget class="QWidget" name="widgetGraficaTabMomentos" native="true">
+                      <property name="minimumSize">
+                       <size>
+                        <width>100</width>
+                        <height>400</height>
+                       </size>
+                      </property>
+                      <property name="toolTip">
+                       <string>Contenedor para PlotWidget de PyQtGraph: crear e insertar desde Python.</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QTableWidget" name="tablaTabMomentos">
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>135</height>
+                       </size>
+                      </property>
+                      <column>
+                       <property name="text">
+                        <string>t (s)</string>
+                       </property>
+                      </column>
+                      <column>
+                       <property name="text">
+                        <string>Componente</string>
+                       </property>
+                      </column>
+                      <column>
+                       <property name="text">
+                        <string>T (N·m)</string>
+                       </property>
+                      </column>
+                      <column>
+                       <property name="text">
+                        <string>Estado</string>
+                       </property>
+                      </column>
+                     </widget>
+                    </item>
+                   </layout>
+                  </widget>
+                  <widget class="QWidget" name="tabEventos">
+                   <attribute name="title">
+                    <string>Eventos</string>
+                   </attribute>
+                   <layout class="QVBoxLayout" name="layoutTabEventos">
+                    <item>
+                     <widget class="QWidget" name="widgetGraficaTabEventos" native="true">
+                      <property name="minimumSize">
+                       <size>
+                        <width>100</width>
+                        <height>400</height>
+                       </size>
+                      </property>
+                      <property name="toolTip">
+                       <string>Contenedor para PlotWidget de PyQtGraph: crear e insertar desde Python.</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QTableWidget" name="tablaTabEventos">
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>135</height>
+                       </size>
+                      </property>
+                      <column>
+                       <property name="text">
+                        <string>t (s)</string>
+                       </property>
+                      </column>
+                      <column>
+                       <property name="text">
+                        <string>Sistema</string>
+                       </property>
+                      </column>
+                      <column>
+                       <property name="text">
+                        <string>Evento</string>
+                       </property>
+                      </column>
+                      <column>
+                       <property name="text">
+                        <string>Diagnóstico</string>
+                       </property>
+                      </column>
+                     </widget>
+                    </item>
+                   </layout>
+                  </widget>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="tabDiagnosticos">
+               <attribute name="title">
+                <string>Diagnóstico</string>
+               </attribute>
+               <layout class="QVBoxLayout" name="layoutDiagnosticos">
+                <item>
+                 <widget class="QWidget" name="widgetGraficaDiagnostico" native="true">
+                  <property name="minimumSize">
+                   <size>
+                    <width>100</width>
+                    <height>400</height>
+                   </size>
+                  </property>
+                  <property name="toolTip">
+                   <string>Contenedor para PlotWidget de PyQtGraph: crear e insertar desde Python.</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QTableWidget" name="tablaDiagnosticoEstudio">
+                  <property name="minimumSize">
+                   <size>
+                    <width>0</width>
+                    <height>145</height>
+                   </size>
+                  </property>
+                  <column>
+                   <property name="text">
+                    <string>Muestra</string>
+                   </property>
+                  </column>
+                  <column>
+                   <property name="text">
+                    <string>Resultado</string>
+                   </property>
+                  </column>
+                  <column>
+                   <property name="text">
+                    <string>Residuo</string>
+                   </property>
+                  </column>
+                  <column>
+                   <property name="text">
+                    <string>Observación</string>
+                   </property>
+                  </column>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </widget>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="layoutAccionesEstudio">
+          <item>
+           <widget class="QLabel" name="lblEstadoEstudio">
+            <property name="text">
+             <string>Estudio no ejecutado</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QProgressBar" name="progressEstudio">
+            <property name="maximumSize">
+             <size>
+              <width>170</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="value">
+             <number>0</number>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="btnEjecutarEstudio">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="toolTip">
+             <string>Requiere enlazar los parámetros y el solucionador con Python.</string>
+            </property>
+            <property name="text">
+             <string>Ejecutar estudio</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="btnCancelarEstudio">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>Cancelar</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="btnVerResultados">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>Ver resultados</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="btnExportarResultadosEstudio">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>Exportar…</string>
+            </property>
            </widget>
           </item>
          </layout>
-        </widget>
-       </item>
-       <item row="2" column="0" colspan="3">
-        <widget class="QFrame" name="frame_2">
-         <property name="frameShape">
-          <enum>QFrame::Shape::StyledPanel</enum>
-         </property>
-         <property name="frameShadow">
-          <enum>QFrame::Shadow::Raised</enum>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_2">
-          <item row="1" column="0">
-           <widget class="QGraphicsView" name="graphicsView_ruedamovil"/>
-          </item>
-          <item row="2" column="0">
-           <widget class="QFrame" name="frame_3">
-            <property name="frameShape">
-             <enum>QFrame::Shape::StyledPanel</enum>
-            </property>
-            <property name="frameShadow">
-             <enum>QFrame::Shadow::Raised</enum>
-            </property>
-            <layout class="QGridLayout" name="gridLayout_11">
-             <item row="0" column="4">
-              <widget class="QDoubleSpinBox" name="doubleSpinBox_5"/>
-             </item>
-             <item row="0" column="1">
-              <widget class="QPushButton" name="pushButton_pausar">
-               <property name="minimumSize">
-                <size>
-                 <width>0</width>
-                 <height>50</height>
-                </size>
-               </property>
-               <property name="maximumSize">
-                <size>
-                 <width>50</width>
-                 <height>16777215</height>
-                </size>
-               </property>
-               <property name="font">
-                <font>
-                 <pointsize>22</pointsize>
-                 <bold>true</bold>
-                </font>
-               </property>
-               <property name="text">
-                <string>⏸</string>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="6">
-              <widget class="QComboBox" name="comboBox_4"/>
-             </item>
-             <item row="1" column="0" colspan="7">
-              <widget class="QProgressBar" name="progressBar">
-               <property name="value">
-                <number>0</number>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="5">
-              <widget class="QLabel" name="label_9">
-               <property name="text">
-                <string>Velocidad:</string>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="0">
-              <widget class="QPushButton" name="pushButton_reproducir">
-               <property name="minimumSize">
-                <size>
-                 <width>0</width>
-                 <height>50</height>
-                </size>
-               </property>
-               <property name="maximumSize">
-                <size>
-                 <width>50</width>
-                 <height>16777215</height>
-                </size>
-               </property>
-               <property name="font">
-                <font>
-                 <family>Bahnschrift</family>
-                 <pointsize>22</pointsize>
-                </font>
-               </property>
-               <property name="text">
-                <string>▶️</string>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="2">
-              <widget class="QPushButton" name="pushButton_Reiniciar">
-               <property name="minimumSize">
-                <size>
-                 <width>0</width>
-                 <height>50</height>
-                </size>
-               </property>
-               <property name="maximumSize">
-                <size>
-                 <width>50</width>
-                 <height>16777215</height>
-                </size>
-               </property>
-               <property name="font">
-                <font>
-                 <pointsize>22</pointsize>
-                </font>
-               </property>
-               <property name="text">
-                <string>🔄</string>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="3">
-              <widget class="QLabel" name="label_8">
-               <property name="text">
-                <string>Tiempo:</string>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="1" column="2">
-        <widget class="QPushButton" name="pushButton_Aplicar_preset">
-         <property name="text">
-          <string>Aplicar</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
+        </item>
+       </layout>
+      </widget>
      </widget>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="layoutAceptarCancelarEditor">
+      <item>
+       <spacer name="espacioBotonesFinales">
+        <property name="orientation">
+         <enum>Qt::Orientation::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>20</width>
+          <height>24</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButton_10">
+        <property name="text">
+         <string>Cancelar</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButton_9">
+        <property name="text">
+         <string>Aceptar</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </item>
    </layout>
   </widget>
@@ -736,7 +2428,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1251</width>
+     <width>1370</width>
      <height>33</height>
     </rect>
    </property>
@@ -786,5 +2478,22 @@
   </action>
  </widget>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>listSeccionesEstudio</sender>
+   <signal>currentRowChanged(int)</signal>
+   <receiver>stackConfiguracion</receiver>
+   <slot>setCurrentIndex(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>

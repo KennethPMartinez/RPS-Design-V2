@@ -6,6 +6,8 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QFont, QPainter, QPen
 from PySide6.QtWidgets import QWidget
 
+from utils.formato_numerico import fmt
+
 
 class WheelWidget(QWidget):
     def __init__(self, parent=None):
@@ -37,5 +39,5 @@ class WheelWidget(QWidget):
         p.setBrush(QColor("#34495e")); p.setPen(QPen(QColor("#ffffff"), 2))
         p.drawEllipse(int(cx - r * .14), int(cy - r * .14), int(r * .28), int(r * .28))
         p.setPen(QColor("#253746")); p.setFont(QFont("Segoe UI", 9))
-        p.drawText(8, self.height() - 8, f"Ángulo: {self.angle:.2f}°")
+        p.drawText(8, self.height() - 8, f"Ángulo: {fmt(self.angle, '°')}")
         p.end()

@@ -9,6 +9,7 @@ informe. Sirve a los tres sistemas (Epi/Hipo/Trocoidal): solo lista lo que cada 
 from __future__ import annotations
 
 import html
+from utils.formato_numerico import fmt
 import numpy as np
 
 # Referencia para el diagnóstico de subcorte: radio de la fresa de acabado de 3 mm.
@@ -56,7 +57,7 @@ def resumen_diseno(motor, p) -> dict:
                 ("Ángulo de presión máximo (θ>0)", float(alpha.max()), "°"),
                 ("Ángulo de presión mínimo (θ>0)", float(alpha.min()), "°")]
     sin_subcorte = rho_min >= RADIO_FRESA_REF_MM
-    veredicto = (f"ρ_min = {rho_min:.4f} mm {'≥' if sin_subcorte else '<'} radio de fresa de referencia "
+    veredicto = (f"ρ_min = {fmt(rho_min)} mm {'≥' if sin_subcorte else '<'} radio de fresa de referencia "
                  f"({RADIO_FRESA_REF_MM} mm): {'sin subcorte' if sin_subcorte else 'RIESGO DE SUBCORTE'}")
     filas_excel = (list(entrada) + [("", "", "")] + list(derivados) + [("", "", "")] + criticos
                    + [("Diagnóstico de subcorte", veredicto, "")])
@@ -68,7 +69,7 @@ def resumen_diseno(motor, p) -> dict:
 def _tabla(filas) -> str:
     out = ["<table cellspacing='0' cellpadding='4' width='100%' style='border-collapse:collapse'>"]
     for a, b, c in filas:
-        v = f"{b:.4f}" if isinstance(b, float) else str(b)
+        v = fmt(b) if isinstance(b, float) else str(b)
         out.append(f"<tr><td style='border-bottom:1px solid #999'>{html.escape(a)}</td>"
                    f"<td align='right' style='border-bottom:1px solid #999'><b>{v}</b> {html.escape(c)}</td></tr>")
     out.append("</table>")

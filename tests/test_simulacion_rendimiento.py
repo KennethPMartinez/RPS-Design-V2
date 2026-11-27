@@ -171,11 +171,19 @@ class TestCacheGeometria(Base):
         self.assertEqual(len(llamadas), 2)
 
     def test_cambiar_la_tolerancia_invalida_la_cache(self):
-        w = self.ventana()
-        llamadas = self._contar(w)
-        ajustes.desviacion.desviacion_lineal_mm = self._lin * 2
-        w._recalcular()
-        self.assertEqual(len(llamadas), 1)
+        from engine import sampling_preferences as sp
+        pol0 = sp.politica_actual()
+        try:
+            sp.configurar_politica(sp.Politica(sp.ESTRATEGIA_ADAPTATIVA, tol_mm=0.0003))
+            w = self.ventana()
+            llamadas = self._contar(w)
+            w._recalcular()
+            self.assertEqual(len(llamadas), 0)
+            sp.configurar_politica(sp.Politica(sp.ESTRATEGIA_ADAPTATIVA, tol_mm=0.0002))   # otra discretización
+            w._recalcular()
+            self.assertEqual(len(llamadas), 1)
+        finally:
+            sp.configurar_politica(pol0)
 
     def test_planetario(self):
         from ui import planetary_window as PW

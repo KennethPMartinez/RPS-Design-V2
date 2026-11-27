@@ -106,6 +106,7 @@ Q2 diálogos: versión `actualizar_modo`/`HABILITACION_POR_MODO` apuntando a los
 | 2026-11-22 | Lote 5: Ajustes integrados (tema global, FPS), control de banco archivado en `banco_legacy/` (§13). |
 | 2026-11-22 | Lote 6: Ajustes → General y Exportación funcionales (§14, §15). |
 | 2026-11-22 | Lote 7: Simulación y rendimiento (inválido, pausa, caché) (§16). |
+| 2026-11-22 | Lote 8: Cálculo y precisión (decimales, discretización, costo) (§17). |
 
 ---
 
@@ -180,11 +181,11 @@ Fuente: `tests/RPS_Ajustes_Claude/` (guía + prompt) con el **`ui/designer/Ajust
 
 ---
 
-## 14. Checklist de la ventana Ajustes (actualizado 22-nov-2026, lote 7)
+## 14. Checklist de la ventana Ajustes (actualizado 22-nov-2026, lote 8)
 
-**Resumen:** 31 funcionales · 5 programadas (se guardan, sin efecto) · 1 no programadas · 37 en total.
+**Resumen:** 35 funcionales · 2 programadas (se guardan, sin efecto) · 1 no programadas · 38 en total.
 
-General, Exportación y Simulación (salvo V-Sync y contacto) quedan completas. Pendiente: Cálculo (🟡), V-Sync y contacto (🟡) y la migración de tips (❌).
+General, Exportación, Simulación (salvo V-Sync y contacto) y Cálculo quedan completas. Pendiente: V-Sync y contacto (🟡) y la migración de tips (❌).
 
 ### General
 
@@ -201,11 +202,12 @@ General, Exportación y Simulación (salvo V-Sync y contacto) quedan completas. 
 
 | Función | Estado | Detalle / verificación |
 |---|---|---|
-| Desviación lineal y angular | ✅ Funcional | `ajustes.desviacion` → `export_manager` (exportaciones); probado Aplicar/Cancelar |
+| Desviación lineal y angular | ✅ Funcional | Definen la resolución de muestreo de la simulación (como dice `AjustesDesviacion`): error máx. a la cuerda [mm] y giro máx. entre mitades de cuerda [°]. Las usa la estrategia adaptativa y la verificación; también se imprimen en el PDF. Probado contra una referencia densa independiente |
+| Decimales mostrados | ✅ Funcional | `utils/formato_numerico` (4/6/8/12/Automático, científica si el valor se mostraría como 0) en inspector de gráficas, tablas de propiedades y del perfil de velocidad, resumen/PDF, textos del planetario, dial y barra de estado. Se repinta al Aplicar. Los arrays, el motor y CSV/TXT/XLSX/DXF conservan la precisión completa (probado) |
+| Estrategia de muestreo: uniforme | ✅ Funcional | Malla de EXACTAMENTE n muestras con extremos y θ = 0 exactos; si n es par usa n+1 (se informa). Probado |
+| Estrategia de muestreo: adaptativa | ✅ Funcional | Subdivisión por niveles con sondas a 1/4, 1/2 y 3/4 de cada tramo; conserva extremos y θ = 0, respeta el máximo de muestras y la profundidad, prioriza los peores tramos y avisa si no cumple. Con la tolerancia por defecto usa ~290 muestras frente a 1001. Probado (error real denso ≤ tolerancia, concentración en curvatura, límites) |
 | Habilitar/deshabilitar campos según estrategia | ✅ Funcional | Lógica de la ventana (`_sampling_ui`) |
-| Decimales mostrados | 🟡 Programado | Se guarda; ninguna vista/exportador lo lee |
-| Estrategia de muestreo (uniforme/adaptativa) + nº de muestras | 🟡 Programado | Se guarda; `sampling_preferences` probado pero NO conectado a `contact_engine` |
-| Mostrar estimación de costo | 🟡 Programado | Se guarda; no hay estimador |
+| Mostrar estimación de costo | ✅ Funcional | Indicador en la barra de estado: nº real de muestras, error y giro máx. frente a la tolerancia, límite alcanzado y tiempo MEDIDO de la última geometría (o «reutilizada de la caché»). No predice tiempos. Probado |
 
 ### Simulación y rendimiento
 
@@ -274,3 +276,16 @@ General, Exportación y Simulación (salvo V-Sync y contacto) quedan completas. 
 - **§16.3 Caché de geometría**: `_geometria()` (LRU de 8). Clave: tipo de parámetros + valores + desviaciones lineal/angular + `modo_hardware`. Si la geometría ya está dibujada se omiten `set_geometria`/`set_curva_base`. Planetario usa el mismo mecanismo.
 - **§16.4 No implementados a propósito**: V-Sync (no verificable sin GPU; la guía exige no afirmarlo) y simulación por contacto (no existe el solver).
 - **Tests**: `test_simulacion_rendimiento.py` (11). Suite: 71 pasaron, 2 omitidos.
+
+---
+
+## 17. Lote 8 · Cálculo y precisión (22-nov-2026)
+
+- **§17.1 Decimales**: `utils/formato_numerico.py` (`fmt`, `fmt_signo`, `configurar`, `clave`) es el único formateador de presentación. Aplicado en `widgets/pg_helpers` (inspector), `ui/property_windows` y `planetary_property_windows` (tablas), `velocity_profile_window`, `utils/design_report` (resumen y PDF), `engine/planetario_engine` (textos), dial y barra de estado. `ui/ajustes_runtime` lo configura al arrancar y al aplicar; `VentanaSistemaBase` repinta (`_refrescar_formato`) solo si el formato cambió. NO se tocó: arrays, algoritmos, CSV/TXT/XLSX/DXF ni los spin de entrada (redondearían parámetros).
+- **§17.2 Discretización**: `engine/sampling_preferences.py` añade `Politica`, `MuestreoInfo`, `uniforme_vec`, `adaptativa_vec` y `muestrear` (las funciones antiguas `uniform`/`adaptive` siguen igual). `BaseEngine.generar_perfil(n_puntos=None)` usa la política vigente (simulación); con `n_puntos` explícito (exportaciones/CAD, `tabular_exportacion`) la malla uniforme es la de siempre. El muestreo de contactos de `contact_engine` no se tocó. Sin runtime, la política por defecto es la antigua (uniforme 1001), así que los motores puros no cambian.
+- **§17.3 Significado de las desviaciones**: se conserva el de `AjustesDesviacion` («resolución de muestreo de la simulación»): lineal = distancia máxima a la cuerda medida en sondas, angular = giro entre mitades de cuerda. Es una verificación numérica con sondas, no una cota rigurosa.
+- **§17.4 Caché**: la clave de geometría ya no usa las desviaciones sueltas sino `Politica.clave` (adaptativa: máx., tol., ang.; uniforme: n y, si se verifica, tol.), de modo que solo se invalida lo que cambia el resultado. Al Aplicar, las ventanas abiertas recalculan sin reiniciar. Actualizado `test_cambiar_la_tolerancia_invalida_la_cache`.
+- **§17.5 Costo**: `utils/costo_calculo.py` + etiqueta en la barra de estado (`_lbl_costo`). Solo métricas verificables; el tiempo es el medido de la última geometría. Advertencia (vía «Avisos de datos») cuando se alcanza el límite o la malla uniforme no cumple. Con «Mostrar estimación» la malla uniforme también se verifica (~3n evaluaciones extra).
+- **§17.6 Resultados**: con tolerancias por defecto, Epitrocoidal/Hipotrocoidal/Trocoidal usan ~283–303 muestras (antes 1001) con error ≤ 0,3 µm; calcular la geometría tarda 2–3 ms. Tolerancias muy estrictas con límite bajo devuelven `limite_alcanzado` y `cumple = False`.
+- **§17.7 Limitaciones**: la malla uniforme con n par usa n+1; el muestreo adaptativo corre en NumPy aunque el backend sea GPU; no hay estimador de tiempo predictivo (a propósito); decimales no afectan los spin de entrada ni los exportados de datos; no se probó en Windows ni con GPU. Tips → Guía Técnica sigue pendiente.
+- **Tests**: `test_calculo_precision.py` (17). Suite completa: 88 pasaron, 2 omitidos (preexistentes); sin regresiones.

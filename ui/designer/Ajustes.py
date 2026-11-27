@@ -26,7 +26,7 @@ class Ui_Dialog(object):
     def setupUi(self, Dialog):
         if not Dialog.objectName():
             Dialog.setObjectName(u"Dialog")
-        Dialog.resize(849, 698)
+        Dialog.resize(1070, 815)
         self.gridLayout_2 = QGridLayout(Dialog)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
         self.pushButton_2 = QPushButton(Dialog)
@@ -93,7 +93,7 @@ class Ui_Dialog(object):
 
         self.chkGuardadoAuto = QCheckBox(self.groupBox_2)
         self.chkGuardadoAuto.setObjectName(u"chkGuardadoAuto")
-        self.chkGuardadoAuto.setEnabled(False)
+        self.chkGuardadoAuto.setEnabled(True)
         self.chkGuardadoAuto.setChecked(False)
 
         self.gridLayout_5.addWidget(self.chkGuardadoAuto, 0, 0, 1, 3)
@@ -328,7 +328,7 @@ class Ui_Dialog(object):
 
         self.chkMostrarEstimacion = QCheckBox(self.groupDesviaciones)
         self.chkMostrarEstimacion.setObjectName(u"chkMostrarEstimacion")
-        self.chkMostrarEstimacion.setEnabled(False)
+        self.chkMostrarEstimacion.setEnabled(True)
         self.chkMostrarEstimacion.setChecked(False)
 
         self.groupDesviacionesLayout.addWidget(self.chkMostrarEstimacion)
@@ -338,7 +338,56 @@ class Ui_Dialog(object):
 
         self.verticalSpacer_2 = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
-        self.gridLayout_7.addItem(self.verticalSpacer_2, 3, 0, 1, 1)
+        self.gridLayout_7.addItem(self.verticalSpacer_2, 4, 0, 1, 1)
+
+        self.groupEstimacionCosto = QGroupBox(self.tab_2)
+        self.groupEstimacionCosto.setObjectName(u"groupEstimacionCosto")
+        self.groupEstimacionCostoLayout = QVBoxLayout(self.groupEstimacionCosto)
+        self.groupEstimacionCostoLayout.setObjectName(u"groupEstimacionCostoLayout")
+        self.lblCalculoExplicacion = QLabel(self.groupEstimacionCosto)
+        self.lblCalculoExplicacion.setObjectName(u"lblCalculoExplicacion")
+        self.lblCalculoExplicacion.setWordWrap(True)
+
+        self.groupEstimacionCostoLayout.addWidget(self.lblCalculoExplicacion)
+
+        self.filaEstimacionMuestras = QHBoxLayout()
+        self.filaEstimacionMuestras.setObjectName(u"filaEstimacionMuestras")
+        self.lblTituloMuestrasPrevistas = QLabel(self.groupEstimacionCosto)
+        self.lblTituloMuestrasPrevistas.setObjectName(u"lblTituloMuestrasPrevistas")
+
+        self.filaEstimacionMuestras.addWidget(self.lblTituloMuestrasPrevistas)
+
+        self.lblEstimacionMuestras = QLabel(self.groupEstimacionCosto)
+        self.lblEstimacionMuestras.setObjectName(u"lblEstimacionMuestras")
+
+        self.filaEstimacionMuestras.addWidget(self.lblEstimacionMuestras)
+
+
+        self.groupEstimacionCostoLayout.addLayout(self.filaEstimacionMuestras)
+
+        self.filaEstimacionDuracion = QHBoxLayout()
+        self.filaEstimacionDuracion.setObjectName(u"filaEstimacionDuracion")
+        self.lblTituloCostoPrevisto = QLabel(self.groupEstimacionCosto)
+        self.lblTituloCostoPrevisto.setObjectName(u"lblTituloCostoPrevisto")
+
+        self.filaEstimacionDuracion.addWidget(self.lblTituloCostoPrevisto)
+
+        self.lblEstimacionCosto = QLabel(self.groupEstimacionCosto)
+        self.lblEstimacionCosto.setObjectName(u"lblEstimacionCosto")
+
+        self.filaEstimacionDuracion.addWidget(self.lblEstimacionCosto)
+
+
+        self.groupEstimacionCostoLayout.addLayout(self.filaEstimacionDuracion)
+
+        self.lblMetodoEstimacion = QLabel(self.groupEstimacionCosto)
+        self.lblMetodoEstimacion.setObjectName(u"lblMetodoEstimacion")
+        self.lblMetodoEstimacion.setWordWrap(True)
+
+        self.groupEstimacionCostoLayout.addWidget(self.lblMetodoEstimacion)
+
+
+        self.gridLayout_7.addWidget(self.groupEstimacionCosto, 3, 0, 1, 1)
 
         self.tabWidget.addTab(self.tab_2, "")
         self.tab_3 = QWidget()
@@ -515,17 +564,43 @@ class Ui_Dialog(object):
 
         self.groupSimComportamientoLayout.addWidget(self.chkCacheGeometria)
 
-        self.checkBox_3 = QCheckBox(self.groupSimComportamiento)
-        self.checkBox_3.setObjectName(u"checkBox_3")
-
-        self.groupSimComportamientoLayout.addWidget(self.checkBox_3)
-
 
         self.gridLayout_8.addWidget(self.groupSimComportamiento, 3, 0, 1, 1)
 
         self.verticalSpacer_4 = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
-        self.gridLayout_8.addItem(self.verticalSpacer_4, 4, 0, 1, 1)
+        self.gridLayout_8.addItem(self.verticalSpacer_4, 5, 0, 1, 1)
+
+        self.groupAnalisisContacto = QGroupBox(self.tab_3)
+        self.groupAnalisisContacto.setObjectName(u"groupAnalisisContacto")
+        self.groupAnalisisContactoLayout = QVBoxLayout(self.groupAnalisisContacto)
+        self.groupAnalisisContactoLayout.setObjectName(u"groupAnalisisContactoLayout")
+        self.checkBox_3 = QCheckBox(self.groupAnalisisContacto)
+        self.checkBox_3.setObjectName(u"checkBox_3")
+
+        self.groupAnalisisContactoLayout.addWidget(self.checkBox_3)
+
+        self.lblEstadoContactoAjustes = QLabel(self.groupAnalisisContacto)
+        self.lblEstadoContactoAjustes.setObjectName(u"lblEstadoContactoAjustes")
+        self.lblEstadoContactoAjustes.setWordWrap(True)
+
+        self.groupAnalisisContactoLayout.addWidget(self.lblEstadoContactoAjustes)
+
+        self.lblAccesoEditorRegimenes = QLabel(self.groupAnalisisContacto)
+        self.lblAccesoEditorRegimenes.setObjectName(u"lblAccesoEditorRegimenes")
+        self.lblAccesoEditorRegimenes.setWordWrap(True)
+
+        self.groupAnalisisContactoLayout.addWidget(self.lblAccesoEditorRegimenes)
+
+        self.btnAbrirEditorRegimenes = QPushButton(self.groupAnalisisContacto)
+        self.btnAbrirEditorRegimenes.setObjectName(u"btnAbrirEditorRegimenes")
+        self.btnAbrirEditorRegimenes.setEnabled(False)
+        self.btnAbrirEditorRegimenes.setMinimumSize(QSize(210, 30))
+
+        self.groupAnalisisContactoLayout.addWidget(self.btnAbrirEditorRegimenes)
+
+
+        self.gridLayout_8.addWidget(self.groupAnalisisContacto, 4, 0, 1, 1)
 
         self.tabWidget.addTab(self.tab_3, "")
         self.tab_4 = QWidget()
@@ -1274,7 +1349,7 @@ class Ui_Dialog(object):
 
         self.retranslateUi(Dialog)
 
-        self.tabWidget.setCurrentIndex(3)
+        self.tabWidget.setCurrentIndex(0)
         self.comboDecimales.setCurrentIndex(0)
         self.comboEstrategiaMuestreo.setCurrentIndex(0)
         self.comboRender.setCurrentIndex(0)
@@ -1295,7 +1370,7 @@ class Ui_Dialog(object):
     # setupUi
 
     def retranslateUi(self, Dialog):
-        Dialog.setWindowTitle(QCoreApplication.translate("Dialog", u"Dialog", None))
+        Dialog.setWindowTitle(QCoreApplication.translate("Dialog", u"Ajustes \u2014 RPS Design V2", None))
         self.pushButton_2.setText(QCoreApplication.translate("Dialog", u"Cancelar", None))
         self.pushButton_3.setText(QCoreApplication.translate("Dialog", u"Aplicar", None))
         self.groupBox.setTitle(QCoreApplication.translate("Dialog", u"Inicio y sesi\u00f3n", None))
@@ -1331,6 +1406,13 @@ class Ui_Dialog(object):
         self.desviacionAngularTxt.setText(QCoreApplication.translate("Dialog", u"Desviaci\u00f3n angular", None))
         self.desviacionAngularSpin.setSuffix(QCoreApplication.translate("Dialog", u" \u00b0", None))
         self.chkMostrarEstimacion.setText(QCoreApplication.translate("Dialog", u"Mostrar estimaci\u00f3n del n\u00famero de muestras y costo de c\u00e1lculo", None))
+        self.groupEstimacionCosto.setTitle(QCoreApplication.translate("Dialog", u"Estimaci\u00f3n y discretizaci\u00f3n", None))
+        self.lblCalculoExplicacion.setText(QCoreApplication.translate("Dialog", u"Los controles existentes de decimales y muestreo se conservan. Los resultados siguientes deber\u00e1n calcularse mediante los motores reales; nunca deben confundirse con mediciones.", None))
+        self.lblTituloMuestrasPrevistas.setText(QCoreApplication.translate("Dialog", u"Muestras estimadas:", None))
+        self.lblEstimacionMuestras.setText(QCoreApplication.translate("Dialog", u"\u2014 (no calculado)", None))
+        self.lblTituloCostoPrevisto.setText(QCoreApplication.translate("Dialog", u"Costo de c\u00e1lculo:", None))
+        self.lblEstimacionCosto.setText(QCoreApplication.translate("Dialog", u"\u2014 (sin estimaci\u00f3n)", None))
+        self.lblMetodoEstimacion.setText(QCoreApplication.translate("Dialog", u"M\u00e9todo y fiabilidad de la estimaci\u00f3n: pendientes de integrar.", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), QCoreApplication.translate("Dialog", u"C\u00e1lculo y precisi\u00f3n", None))
         self.groupRender.setTitle(QCoreApplication.translate("Dialog", u"Renderizado", None))
         self.comboRenderLabel.setText(QCoreApplication.translate("Dialog", u"Motor de renderizado", None))
@@ -1366,7 +1448,17 @@ class Ui_Dialog(object):
         self.chkDetenerInvalido.setText(QCoreApplication.translate("Dialog", u"Detener simulaci\u00f3n ante un estado matem\u00e1ticamente inv\u00e1lido", None))
         self.chkConservarPausa.setText(QCoreApplication.translate("Dialog", u"Conservar resultados calculados al pausar", None))
         self.chkCacheGeometria.setText(QCoreApplication.translate("Dialog", u"Reutilizar geometr\u00eda no modificada", None))
-        self.checkBox_3.setText(QCoreApplication.translate("Dialog", u"Simulaci\u00f3n basada en contacto (Impacto en rendimiento alto)", None))
+        self.groupAnalisisContacto.setTitle(QCoreApplication.translate("Dialog", u"Contacto y estudios de transmisi\u00f3n", None))
+#if QT_CONFIG(tooltip)
+        self.checkBox_3.setToolTip(QCoreApplication.translate("Dialog", u"Preferencia global del proyecto; los par\u00e1metros f\u00edsicos se configuran en el editor de reg\u00edmenes.", None))
+#endif // QT_CONFIG(tooltip)
+        self.checkBox_3.setText(QCoreApplication.translate("Dialog", u"Habilitar an\u00e1lisis basado en contacto (mayor costo de c\u00e1lculo)", None))
+        self.lblEstadoContactoAjustes.setText(QCoreApplication.translate("Dialog", u"Activar esta opci\u00f3n permite trabajar con estudios de contacto desde el editor de reg\u00edmenes. El an\u00e1lisis cuasiest\u00e1tico inicial no requiere inercias; no calcula impactos ni vibraciones.", None))
+        self.lblAccesoEditorRegimenes.setText(QCoreApplication.translate("Dialog", u"Los par\u00e1metros del motor, las curvas de par y las propiedades de contacto pertenecen a cada estudio y se guardar\u00e1n con el proyecto.", None))
+#if QT_CONFIG(tooltip)
+        self.btnAbrirEditorRegimenes.setToolTip(QCoreApplication.translate("Dialog", u"Disponible despu\u00e9s de conectar este bot\u00f3n con VentanaPerfilVelocidad en Python.", None))
+#endif // QT_CONFIG(tooltip)
+        self.btnAbrirEditorRegimenes.setText(QCoreApplication.translate("Dialog", u"Abrir editor de reg\u00edmenes\u2026", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_3), QCoreApplication.translate("Dialog", u"Simulaci\u00f3n y rendimiento", None))
         self.comboTemaLabel.setText(QCoreApplication.translate("Dialog", u"Preset global", None))
         self.comboTema.setItemText(0, QCoreApplication.translate("Dialog", u"Oscuro", None))
