@@ -1356,7 +1356,7 @@ class Ui_Dialog(object):
 
         self.retranslateUi(Dialog)
 
-        self.tabWidget.setCurrentIndex(2)
+        self.tabWidget.setCurrentIndex(0)
         self.comboDecimales.setCurrentIndex(0)
         self.comboEstrategiaMuestreo.setCurrentIndex(0)
         self.comboRender.setCurrentIndex(0)
