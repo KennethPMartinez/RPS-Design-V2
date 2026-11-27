@@ -256,9 +256,10 @@ class PanelRegimenDinamico(QtCore.QObject):
         u = self.u
         u.listSeccionesEstudio.currentRowChanged.connect(u.stackConfiguracion.setCurrentIndex)
         u.listSeccionesEstudio.setCurrentRow(0)
-        u.comboTipoMotor.currentIndexChanged.connect(lambda *_: (self._visibilidad_motor(), self._editado()))
-        u.comboModoAccionamiento.currentIndexChanged.connect(lambda *_: self._editado())
-        for s in (u.spinPotenciaNominal, u.spinVelocidadNominal, u.spinParRetencion, u.spinFrecuenciaRed,
+        u.comboTipoMotor.currentIndexChanged.connect(self._tipo_motor_cambiado)
+        for s in (u.spinPotenciaNominal, u.spinFrecuenciaRed, u.spinNumeroPolos):
+            s.valueChanged.connect(self._datos_ac_cambiados)
+        for s in (u.spinPotenciaNominal, u.spinParRetencion, u.spinFrecuenciaRed,
                   u.spinNumeroPolos, u.spinParResistente, u.spinRigidezNormal, u.spinToleranciaBrecha,
                   u.spinAmortiguamientoNormal, u.spinToleranciaEquilibrio, u.spinToleranciaMomento,
                   u.spinMaxIteraciones, u.spinAmplitudCarga, u.spinFrecuenciaCarga, u.spinFaseCarga,
@@ -327,8 +328,8 @@ class PanelRegimenDinamico(QtCore.QObject):
     def leer(self) -> Escenario:
         u = self.u
         motor = acc.ModeloMotor(
-            tipo=acc.tipo_desde_texto(u.comboTipoMotor.currentText()), modo=u.comboModoAccionamiento.currentText(),
-            potencia_nominal_w=u.spinPotenciaNominal.value(), velocidad_nominal_rpm=u.spinVelocidadNominal.value(),
+            tipo=acc.tipo_desde_texto(u.comboTipoMotor.currentText()), modo=acc.MODO_CAPACIDAD,
+            potencia_nominal_w=u.spinPotenciaNominal.value(),
             par_retencion_nm=u.spinParRetencion.value(), frecuencia_hz=u.spinFrecuenciaRed.value(),
             polos=u.spinNumeroPolos.value(), curva=_leer_tabla(u.tablaCurvaMotor),
             expresion=u.editExpresionMotor.text().strip())
@@ -364,9 +365,7 @@ class PanelRegimenDinamico(QtCore.QObject):
         try:
             m = e.motor
             u.comboTipoMotor.setCurrentIndex({acc.STEPPER: 0, acc.AC: 1, acc.CUSTOM: 2}.get(m.tipo, 0))
-            i = u.comboModoAccionamiento.findText(m.modo)
-            u.comboModoAccionamiento.setCurrentIndex(max(0, i))
-            for s, v in ((u.spinPotenciaNominal, m.potencia_nominal_w), (u.spinVelocidadNominal, m.velocidad_nominal_rpm),
+            for s, v in ((u.spinPotenciaNominal, m.potencia_nominal_w),
                          (u.spinParRetencion, m.par_retencion_nm), (u.spinFrecuenciaRed, m.frecuencia_hz),
                          (u.spinNumeroPolos, m.polos)):
                 s.setValue(v)
@@ -433,12 +432,15 @@ class PanelRegimenDinamico(QtCore.QObject):
         if m.tipo == acc.AC:
             ns = m.velocidad_sincrona_rpm
             partes.append(f"Velocidad síncrona n_s = 120·f/p = {_f(ns, 'rpm')}" if ns else "n_s no definida")
-            if ns and m.velocidad_nominal_rpm:
-                partes.append(f"real (nominal) {_f(m.velocidad_nominal_rpm, 'rpm')} · deslizamiento "
-                              f"{_f(100 * (ns - m.velocidad_nominal_rpm) / ns, '%')}")
+            if ns:
+                partes.append(f"Con variador: velocidad nominal real ≈ {_f(0.95 * ns, 'rpm')} (deslizamiento 5 %, "
+                              "hipótesis); par nominal constante hasta ella y potencia constante hasta 2·n_s.")
         if m.tipo == acc.STEPPER:
             partes.append("El par de retención solo vale en reposo; a otras velocidades se usa la curva par–velocidad.")
-        partes.append("La potencia nominal es capacidad (régimen continuo), no potencia entregada.")
+        partes.append("La potencia nominal es capacidad (régimen continuo), no potencia entregada. La trayectoria la "
+                      "dicta el preset del régimen cinemático; el motor se evalúa por su capacidad.")
+        for linea in getattr(self, "_informe_preset", []) or []:
+            partes.append("• " + linea)
         err = m.validar()
         if err:
             partes.append("⚠ " + "; ".join(err))
@@ -448,12 +450,17 @@ class PanelRegimenDinamico(QtCore.QObject):
         u = self.u
         tipo = acc.tipo_desde_texto(u.comboTipoMotor.currentText())
         for w in (u.spinParRetencion, u.lblSpinParRetencion):
-            w.setVisible(tipo in (acc.STEPPER, acc.CUSTOM))
+            w.setVisible(True)
+        u.spinParRetencion.setReadOnly(tipo == acc.AC)
+        u.spinPotenciaNominal.setToolTip("Capacidad de régimen continuo (no es la potencia entregada). Stepper: máximo "
+                                         "T·ω de su curva; AC: potencia de placa.")
         for w in (u.spinFrecuenciaRed, u.lblSpinFrecuenciaRed, u.spinNumeroPolos, u.lblSpinNumeroPolos):
             w.setVisible(tipo == acc.AC)
         for w in (u.editExpresionMotor, getattr(u, "lbl_editExpresionMotor", None)):
             if w is not None:
                 w.setVisible(tipo == acc.CUSTOM)
+        if tipo == acc.AC:
+            u.lblSpinParRetencion.setText("Par nominal (AC: P / ω_nom, derivado)")
         if tipo == acc.STEPPER:
             u.lblSpinParRetencion.setText("Par de retención (Stepper)")
         elif tipo == acc.CUSTOM:
@@ -462,6 +469,77 @@ class PanelRegimenDinamico(QtCore.QObject):
             u.lblInfoMotor.setText(self._texto_motor(self.leer().motor))
         except Exception:
             pass
+
+    @manejador_seguro
+    def _tipo_motor_cambiado(self, *_):
+        """Al elegir el tipo se cargan sus valores por defecto (Stepper = PK244-01B del banco; AC 4 polos 50 Hz)."""
+        if not self._cargando:
+            from engine.presets_fisicos import motor_defecto
+            m = motor_defecto(acc.tipo_desde_texto(self.u.comboTipoMotor.currentText()))
+            self._escribir_motor(m)
+        self._visibilidad_motor()
+        self._editado()
+
+    @manejador_seguro
+    def _datos_ac_cambiados(self, *_):
+        """AC: par nominal y curva (con variador) se derivan de la potencia, la frecuencia y los polos."""
+        u = self.u
+        if self._cargando or acc.tipo_desde_texto(u.comboTipoMotor.currentText()) != acc.AC:
+            return
+        from engine.presets_fisicos import curva_ac
+        P, f, p = u.spinPotenciaNominal.value(), u.spinFrecuenciaRed.value(), u.spinNumeroPolos.value()
+        curva = curva_ac(P, f, p)
+        self._cargando = True
+        try:
+            u.spinParRetencion.setValue(curva[0][1])
+            _poner_tabla(u.tablaCurvaMotor, curva)
+        finally:
+            self._cargando = False
+
+    def _escribir_motor(self, m):
+        u = self.u
+        self._cargando = True
+        try:
+            for s, v in ((u.spinPotenciaNominal, m.potencia_nominal_w), (u.spinParRetencion, m.par_retencion_nm),
+                         (u.spinFrecuenciaRed, m.frecuencia_hz), (u.spinNumeroPolos, m.polos)):
+                s.setValue(v)
+            u.editExpresionMotor.setText(m.expresion)
+            _poner_tabla(u.tablaCurvaMotor, m.curva)
+        finally:
+            self._cargando = False
+
+    def aplicar_preset_fisico(self, g: dict, preset: str) -> None:
+        """El preset impone motor, carga e inercias: escenario «asociado al preset» (salvo que el usuario haya
+        guardado uno propio para ese preset, que tiene prioridad)."""
+        if self.gestor is None:
+            return
+        b = self.gestor.biblioteca
+        if preset in b.por_preset:
+            esc = b.de_preset(preset)
+            origen = "escenario guardado por el usuario para este preset"
+        else:
+            esc = self.leer()
+            esc.motor = copy.deepcopy(g["motor"])
+            esc.carga = copy.deepcopy(g["carga"])
+            esc.dinamica.inercia_entrada_kg_mm2 = float(g["inercia_entrada"])
+            esc.dinamica.inercia_salida = float(g["inercia_salida"])
+            origen = "impuesto por el preset"
+        if not self._preguntar_sin_guardar():
+            return
+        nombre = f"{ESCENARIO_PRESET}: {preset}"
+        self._seleccion = nombre
+        self._escribir(esc)
+        esc = self.leer()                    # tal como lo muestra el formulario (decimales de cada campo)
+        esc.nombre = nombre
+        self._base = copy.deepcopy(esc)
+        self.gestor.escenario = copy.deepcopy(esc)
+        self.gestor.escenario.nombre = nombre
+        self.gestor.seleccion = nombre
+        self.gestor.escenario_edicion = copy.deepcopy(esc)
+        self._sel_combo(nombre)
+        self._informe_preset = [f"Escenario {origen}."] + list(g.get("informe", []))
+        self.u.lblInfoMotor.setText(self._texto_motor(esc.motor))
+        self._actualizar_prescritas()
 
     def _unidades_carga(self):
         lin = self.gestor is not None and self.gestor.v.LINEAL and self._componente() == EN_SALIDA
@@ -615,6 +693,8 @@ class PanelRegimenDinamico(QtCore.QObject):
     def _cargar_escenario(self, nombre: str, esc: Escenario):
         self._seleccion = nombre
         self._escribir(esc)
+        esc = self.leer()                    # tal como lo muestra el formulario (decimales de cada campo)
+        esc.nombre = nombre
         self._base = copy.deepcopy(esc)
         self.gestor.escenario = copy.deepcopy(esc)
         self.gestor.escenario.nombre = nombre
@@ -634,7 +714,7 @@ class PanelRegimenDinamico(QtCore.QObject):
             self._cargar_escenario(ESCENARIO_LIBRE, Escenario())
         elif texto == ESCENARIO_PRESET:
             preset = self.u.comboBox_preset.currentText()
-            self._cargar_escenario(f"{ESCENARIO_PRESET}: {preset}", b.de_preset(preset))
+            self._cargar_escenario(f"{ESCENARIO_PRESET}: {preset}", self._escenario_de_preset(preset))
         elif texto == ESCENARIO_NUEVO:
             nombre = self._pedir_nombre()
             if not nombre:
@@ -645,6 +725,23 @@ class PanelRegimenDinamico(QtCore.QObject):
             self._cargar_escenario(nombre, b.personalizados[nombre])
         else:
             self._cargar_escenario(texto, copy.deepcopy(b.personalizados[texto]))
+
+    def _escenario_de_preset(self, preset: str) -> Escenario:
+        """Guardado por el usuario para el preset, o el que impone el preset (motor, carga, inercias)."""
+        b = self.gestor.biblioteca
+        if preset in b.por_preset:
+            return b.de_preset(preset)
+        esc = b.de_preset(preset)
+        base = self.leer()
+        esc.contacto, esc.solucionador = base.contacto, base.solucionador
+        g = self.w._preset_fisico(preset) if hasattr(self.w, "_preset_fisico") else None
+        if g:
+            esc.motor = copy.deepcopy(g["motor"])
+            esc.carga = copy.deepcopy(g["carga"])
+            esc.dinamica.inercia_entrada_kg_mm2 = float(g["inercia_entrada"])
+            esc.dinamica.inercia_salida = float(g["inercia_salida"])
+            self._informe_preset = ["Escenario impuesto por el preset."] + list(g.get("informe", []))
+        return esc
 
     def _pedir_nombre(self) -> str:
         b = self.gestor.biblioteca
@@ -693,7 +790,7 @@ class PanelRegimenDinamico(QtCore.QObject):
             return
         if not self._preguntar_sin_guardar():
             return
-        self._cargar_escenario(f"{ESCENARIO_PRESET}: {preset}", self.gestor.biblioteca.de_preset(preset))
+        self._cargar_escenario(f"{ESCENARIO_PRESET}: {preset}", self._escenario_de_preset(preset))
 
     # ================================================================== ejecución
     def _adaptador(self):

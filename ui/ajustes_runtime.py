@@ -59,7 +59,9 @@ class AjustesRuntime(QtCore.QObject):
         if usar_gl != ajustes.render_opengl:
             from widgets.pg_helpers import aplicar_opengl
             if not aplicar_opengl(usar_gl, parent):
-                raise RuntimeError("No se pudo aplicar OpenGL; se conserva la preferencia anterior")
+                from widgets import pg_helpers
+                motivo = pg_helpers.ULTIMO_ERROR_OPENGL or "motivo no informado por el controlador"
+                raise RuntimeError(f"No se pudo aplicar OpenGL ({motivo}); se conserva la preferencia anterior")
             ajustes.render_opengl = usar_gl
         self.estado = estado
         self.theme.apply(estado.apariencia)

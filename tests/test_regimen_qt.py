@@ -318,3 +318,46 @@ class Tema(Base):
         self.assertEqual(ed.curvas["Velocidad"].opts["pen"].color().name(), "#123456")
         self.assertEqual(color_tecnico("Curva base"), (0x12, 0x34, 0x56))
         self.assertEqual(ed.rueda.colores["fondo"], color_tecnico("Fondo de gráficas"))
+
+
+class PresetImponeFisica(Base):
+    def test_aplicar_preset_impone_motor_carga_e_inercias(self):
+        for seguro in (True, False):
+            runtime.estado.simulacion.modo_seguro_banco = seguro
+            w = self.ventana(VentanaHipotrocoidal)
+            ed = w._editar_linea_tiempo()
+            u = ed.ui
+            u.comboBox_preset.setCurrentText("Indexer")
+            u.pushButton_Aplicar_preset.click()
+            e = ed.dinamico.leer()
+            self.assertTrue(ed.dinamico._seleccion.endswith("Indexer"))
+            if seguro:
+                self.assertEqual(e.motor.par_retencion_nm, 0.26)          # PK244-01B
+                self.assertEqual(e.carga.constante, 0.0)
+                self.assertGreater(e.dinamica.inercia_entrada_kg_mm2, 5.0)
+            else:
+                self.assertGreater(e.dinamica.inercia_salida, 1e4)        # mesa indexadora real (kg·mm²)
+            self.assertIn("Aplicación", u.lblInfoMotor.text())
+            ed.close()
+        runtime.estado.simulacion.modo_seguro_banco = True
+
+    def test_tipo_de_motor_carga_valores_por_defecto(self):
+        w = self.ventana(VentanaEpitrocoidal)
+        ed = w._editar_linea_tiempo()
+        u = ed.ui
+        u.comboTipoMotor.setCurrentIndex(1)                               # AC
+        self.assertEqual(u.spinFrecuenciaRed.value(), 50.0)
+        self.assertEqual(u.spinNumeroPolos.value(), 4)
+        self.assertGreater(u.spinPotenciaNominal.value(), 0)
+        self.assertGreater(u.spinParRetencion.value(), 0)                 # par nominal derivado
+        u.spinPotenciaNominal.setValue(750.0)
+        self.assertAlmostEqual(u.spinParRetencion.value(), 750 / (0.95 * 1500 * 3.141592653589793 / 30), places=3)
+        u.comboTipoMotor.setCurrentIndex(0)                               # Stepper = PK244-01B
+        self.assertEqual(u.spinParRetencion.value(), 0.26)
+        self.assertEqual(u.tablaCurvaMotor.rowCount(), 10)
+
+    def test_hud_queda_encima_del_viewport(self):
+        w = self.ventana(VentanaEpitrocoidal)
+        w.sim.setViewport(QtWidgets.QWidget())                            # lo que hace el cambio OpenGL ⇄ software
+        w._emitir_estado()
+        self.assertIs(w.sim.children()[-1], w.sim.lbl_fps)

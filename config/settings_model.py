@@ -150,6 +150,9 @@ class Simulacion:
     conservar_pausa: bool = True
     cache_geometria: bool = True
     basada_en_contacto: bool = False
+    # Modo seguro del banco RP-PG-TB: presets con el stepper PK244-01B (< 600 rpm en la entrada, sin carga externa);
+    # apagado: valores realistas de cada aplicación con el motor (stepper o AC) dimensionado.
+    modo_seguro_banco: bool = True
 
 
 @dataclass

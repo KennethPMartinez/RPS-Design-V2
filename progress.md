@@ -109,6 +109,7 @@ Q2 diálogos: versión `actualizar_modo`/`HABILITACION_POR_MODO` apuntando a los
 | 2026-11-22 | Lote 8: Cálculo y precisión (decimales, discretización, costo) (§17). |
 | 2026-11-26 | Lote 9 (261120261): régimen dinámico/contacto cuasiestático, editor de regímenes, HUD (§18). |
 | 2026-11-26 | Lote 10 (261120262): la dinámica de contacto gobierna la animación, OpenGL, tema, ω manual, optimización, guía PDF (§19). |
+| 2026-11-26 | Lote 11 (261120263): presets con física (modo seguro del banco / realista), PK244-01B, AC con variador, HUD (§20). |
 
 ---
 
@@ -414,3 +415,25 @@ Pedidos del usuario (8) y su estado:
 ### §19.2 Archivos
 Nuevos: `engine/dinamica_contacto.py`, `utils/guia.py`, `docs/Guia_tecnica_RPS_Design_V2.pdf`, `docs/fuentes_guia/` (generador, capturas). Modificados: `engine/contact_engine.py`, `engine/contacto_fisico.py`, `engine/mecanismos_fisicos.py`, `engine/estudio_fisico.py`, `engine/accionamiento.py`, `engine/cargas.py`, `ui/sistema_base.py`, `ui/planetary_window.py`, `ui/estudio_qt.py`, `ui/regimen_dinamico.py`, `ui/velocity_profile_window.py`, `ui/theme_manager.py`, `ui/settings_window.py`, `widgets/hud.py`, `widgets/plot_menu.py`, `widgets/pg_helpers.py`, `widgets/wheel_widget.py`, pruebas.
 - **Tests**: 134 (31 de física/dinámica/optimización, 13 Qt del régimen, resto previos). Sin regresiones. Arranque de la app verificado (offscreen).
+
+
+---
+
+## 20. Lote 11 · Los presets imponen la física (26-nov-2026, entrega 261120263)
+
+Base: cambios del usuario en el repo (`c187535`, `267b8df`): se retiraron del `.ui` del editor `comboModoAccionamiento` («Movimiento impuesto») y `spinVelocidadNominal`; en Ajustes se añadió «Modo seguro para banco de pruebas» (`chkBajarFPSInactivo_2`, marcado por defecto).
+
+| Pedido | Estado | Detalle |
+|---|---|---|
+| Valores por defecto de Stepper y AC | ✅ | Stepper = **PK244-01B** de la ficha del usuario: retención 0,26 N·m, J rotor 54×10⁻⁷ kg·m² = 5,4 kg·mm², curva de par de salida a 24 VDC y 1,2 A/fase (paso completo, leída del diagrama), potencia ≈ 14,4 W (máx. T·ω de la curva). AC = 4 polos, 50 Hz, 250 W con variador: par nominal P/ω_nom (n_nom = 0,95·n_s, hipótesis de deslizamiento 5 %) constante y potencia constante hasta 2·n_s; par nominal y curva se regeneran al cambiar P, f o polos. Elegir el tipo de motor carga sus valores |
+| Retirar rpm impuestas y «Movimiento impuesto» | ✅ | `ModeloMotor.modo` siempre = capacidad (los proyectos anteriores se convierten al abrir); sin velocidad nominal en el modelo AC ni en Custom por valores (esquina = P/T) |
+| Presets imponen cargas e inercias | ✅ | `engine/presets_fisicos.py`: una aplicación por preset (banda transportadora, alimentador vibratorio 100 Hz, ensayo de holgura, actuador de válvula 90°, volteador 180°, mesa indexadora, tambor de lavadora, vibrador) con perfil de la SALIDA, carga e inercia típicas y su origen. «Aplicar» en el régimen cinemático impone motor, carga e inercias como «Escenario asociado al preset» (un escenario guardado por el usuario tiene prioridad) |
+| Relación de transmisión nominal | ✅ | entrada = salida·i (velocidad ×i) y la carga se refleja ÷i; cremallera: x = r·φ con r = prrp (masa J/r², fuerza T/r, abscisas en mm y mm/s) |
+| Modo seguro del banco | ✅ | PK244-01B, sin carga externa (el banco opera sin carga), inercias del banco (rotor + engranaje 7075 de 4 mm, estimación geométrica por la fórmula de Green). Misma forma de movimiento; solo se estira el tiempo (posiciones iguales, v ÷ s, a ÷ s²) hasta < 600 rpm en la entrada y par ≤ par de salida/2 |
+| Modo realista con motor dimensionado | ✅ | stepper (NEMA 17/23/34, curva PK244 escalada al par de retención típico, FS 2) para posicionar o AC 4 polos con variador (0,09–4 kW IEC) para giro continuo: el más pequeño que cubre el par requerido; si ninguno alcanza se asigna el mayor y el estudio muestra los intervalos no viables |
+| Bug: el HUD desaparece al cambiar Ajustes | ✅ (no reproducible aquí con OpenGL real) | Al cambiar el render se crea un viewport nuevo que queda ENCIMA de la etiqueta del HUD. Ahora el HUD se trae al frente en cada repintado y tras cada cambio de viewport. Test `test_hud_queda_encima_del_viewport`. Además, el error de OpenGL de `ajustes_runtime.aplicar` también informa el motivo |
+| Bug encontrado al probar | ✅ | Al cargar un escenario el formulario redondea a sus decimales y quedaba «sin guardar» al instante (diálogo modal inesperado). La base se toma ahora del formulario |
+
+- Valores de aplicación (fuentes indicadas en el informe del editor y en la guía §5.3): ejemplo de mesa indexadora de Oriental Motor (J_L = 265,44×10⁻⁴ kg·m², T_L = 0), actuadores de válvula de 20–50 N·m en 4–90 s, alimentadores de 100–180 Hz con ≈ 0,6 mm de amplitud, arranque suave de transportadores con variador; el resto son estimaciones de dimensionado declaradas como tales.
+- Pendiente/criterio: la línea de tiempo «predeterminada» de cada ventana sigue siendo la histórica (80 °/s) hasta que se aplica un preset en el editor.
+- **Tests**: 141 (+7: ficha PK244, estiramiento temporal, modos seguro/realista, relación ×i/÷i, preset en el editor, valores por defecto del motor, HUD). Guía técnica actualizada (18 págs.).

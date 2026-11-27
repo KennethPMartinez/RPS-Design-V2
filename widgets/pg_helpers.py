@@ -126,6 +126,8 @@ def aplicar_opengl(activo: bool, parent=None) -> bool:
         try:
             p.useOpenGL(activo)
             p.getPlotItem().update()
+            for hijo in p.findChildren(QtWidgets.QLabel):   # HUD y etiquetas superpuestas: sobre el viewport nuevo
+                hijo.raise_()
         except RuntimeError as e:   # gráfica destruida entre la lista y el cambio: se ignora
             print(f"[pg_helpers] gráfica ya destruida, se omite: {e}")
         except Exception as e:      # driver sin soporte, etc.

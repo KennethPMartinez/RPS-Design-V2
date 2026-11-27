@@ -80,7 +80,9 @@ def compilar_expresion(texto: str):
 @dataclass
 class ModeloMotor:
     tipo: str = STEPPER
-    modo: str = MODO_IMPUESTO
+    # El régimen cinemático (preset) dicta la trayectoria; el motor siempre se EVALÚA por su capacidad (lote 11:
+    # se retiró «Movimiento impuesto» y la velocidad nominal del editor).
+    modo: str = MODO_CAPACIDAD
     potencia_nominal_w: float = 0.0
     velocidad_nominal_rpm: float = 0.0
     par_retencion_nm: float = 0.0
@@ -95,7 +97,9 @@ class ModeloMotor:
     @staticmethod
     def from_dict(d: dict) -> "ModeloMotor":
         campos = ModeloMotor.__dataclass_fields__
-        return ModeloMotor(**{k: v for k, v in (d or {}).items() if k in campos})
+        m = ModeloMotor(**{k: v for k, v in (d or {}).items() if k in campos})
+        m.modo = MODO_CAPACIDAD          # proyectos anteriores con «Movimiento impuesto»
+        return m
 
     # -- derivados ----------------------------------------------------------------------------
     @property
@@ -121,15 +125,12 @@ class ModeloMotor:
             ns = self.velocidad_sincrona_rpm
             if ns is None:
                 err.append("AC: frecuencia y número de polos deben ser positivos")
-            elif self.velocidad_nominal_rpm >= ns > 0 and self.velocidad_nominal_rpm > 0 and len(c) < 2:
-                err.append(f"AC: la velocidad nominal ({self.velocidad_nominal_rpm:g} rpm) debe ser menor que la "
-                           f"síncrona ({ns:g} rpm); la diferencia es el deslizamiento")
+            elif len(c) < 2 and self.potencia_nominal_w <= 0:
+                err.append("AC: indique la potencia nominal o la curva par–velocidad")
         if self.tipo == CUSTOM:
-            tiene = len(c) >= 2 or self.expresion.strip() or (self.par_retencion_nm > 0 and self.potencia_nominal_w > 0
-                                                               and self.velocidad_nominal_rpm > 0)
+            tiene = len(c) >= 2 or self.expresion.strip() or (self.par_retencion_nm > 0 and self.potencia_nominal_w > 0)
             if not tiene:
-                err.append("Custom: parametrización obligatoria (curva ≥ 2 puntos, expresión, o par, potencia y "
-                           "velocidad nominales)")
+                err.append("Custom: parametrización obligatoria (curva ≥ 2 puntos, expresión, o par y potencia)")
             if self.expresion.strip():
                 try:
                     compilar_expresion(self.expresion)
@@ -140,8 +141,9 @@ class ModeloMotor:
     def descripcion_hipotesis(self) -> list[str]:
         h = ["acople directo motor–eje de entrada", "curva simétrica en ambos sentidos de giro"]
         c = self._curva_np()
-        if self.tipo == AC and len(c) < 2:
-            h.append("AC sin curva: modelo lineal de deslizamiento entre n_nom y n_s (solo en esa zona)")
+        if self.tipo == AC:
+            h.append("AC 4 polos con variador: par nominal constante hasta n_nom = 0,95·n_s y potencia constante "
+                     "hasta 2·n_s (curva generada a partir de P, f y polos si no se tabula otra)")
         if self.tipo == CUSTOM and len(c) < 2 and not self.expresion.strip():
             h.append("Custom por valores: par constante hasta n_nom y potencia constante después")
         return h
@@ -162,21 +164,19 @@ class ModeloMotor:
             return None, ("Stepper sin curva par–velocidad: el par de retención solo vale en reposo"
                           if self.par_retencion_nm > 0 else "Stepper sin par de retención ni curva")
         if self.tipo == AC:
-            ns, nn, P = self.velocidad_sincrona_rpm, self.velocidad_nominal_rpm, self.potencia_nominal_w
-            if not (P > 0 and 0 < nn < ns):
-                return None, "AC sin curva: faltan potencia y velocidad nominales (real < síncrona)"
-            if nn <= n <= ns:
-                t_nom = P / (nn * math.pi / 30.0)
-                return t_nom * (ns - n) / (ns - nn), ""
-            return None, (f"AC: {n:.4g} rpm fuera de la zona lineal [{nn:g}, {ns:g}] rpm "
-                          "(se requiere curva característica o variador)")
+            from engine.presets_fisicos import curva_ac
+            cc = np.asarray(curva_ac(self.potencia_nominal_w, self.frecuencia_hz, self.polos), float)
+            if n > cc[-1, 0] + 1e-9:
+                return None, f"AC: {n:.4g} rpm por encima de 2·n_s = {cc[-1, 0]:g} rpm"
+            return float(np.interp(n, cc[:, 0], cc[:, 1])), ""
         # CUSTOM
         if self.expresion.strip():
             try:
                 return abs(compilar_expresion(self.expresion)(n)), ""
             except Exception as e:
                 return None, f"expresión: {e}"
-        T, P, nn = self.par_retencion_nm, self.potencia_nominal_w, self.velocidad_nominal_rpm
+        T, P = self.par_retencion_nm, self.potencia_nominal_w
+        nn = P / T * 30.0 / math.pi if T > 0 else 0.0        # esquina par constante / potencia constante
         if n <= nn:
             return T, ""
         return P / (n * math.pi / 30.0), ""

@@ -135,7 +135,7 @@ st.append(Paragraph("Diseño y simulación de sistemas de piñón de rodillos: E
                     S["st"]))
 st.append(Spacer(1, 4 * cm))
 st.append(Paragraph("Semillero TAMA · Facultad de Ingeniería Mecánica · Universidad Santo Tomás<br/>"
-                    "Versión de la aplicación: V2 (lote 10, noviembre de 2026)", S["st"]))
+                    "Versión de la aplicación: V2 (lote 11, noviembre de 2026)", S["st"]))
 st.append(PageBreak())
 st.append(Paragraph("Contenido", ParagraphStyle("c0", parent=S["h1"])))
 toc = TableOfContents()
@@ -250,22 +250,48 @@ L("<b>Personalizado (sin carga externa)</b>: escenario base, sin pares asignados
   "«Guardar escenario…» guarda en la selección actual; «Restablecer» descarta los cambios sin guardar.")
 H2("5.2 Accionamiento")
 FIG("editor_accionamiento", "Figura 4. Accionamiento: tipo de motor, modo de evaluación, datos e inercia de entrada.")
-TAB([["Motor", "Datos", "Par disponible"],
-     ["Stepper", "Potencia y velocidad nominales, par de retención, curva par–velocidad",
+TAB([["Motor", "Valores por defecto", "Par disponible"],
+     ["Stepper", "Oriental Motor PK244-01B (banco): retención 0,26 N·m, J rotor 5,4 kg·mm², curva de par de "
+                 "salida a 24 V y 1,2 A/fase; potencia ≈ 14,4 W (máx. T·ω de la curva)",
       "Curva tabulada; el par de retención solo vale en reposo"],
-     ["AC (4 polos, 50 Hz por defecto)", "Frecuencia, polos, potencia y velocidad nominales, curva",
-      "Curva; sin curva, modelo lineal de deslizamiento entre n<sub>nom</sub> y n<sub>s</sub> = 120·f/p"],
-     ["Custom", "Obligatorio: curva, expresión T(n) o par/potencia/velocidad",
+     ["AC (4 polos, 50 Hz)", "250 W; par nominal derivado P/ω<sub>nom</sub> con n<sub>nom</sub> = 0,95·n<sub>s</sub>",
+      "Con variador: par nominal constante hasta n<sub>nom</sub> y potencia constante hasta 2·n<sub>s</sub> "
+      "(la curva se regenera al cambiar P, f o polos)"],
+     ["Custom", "Obligatorio: curva, expresión T(n) o par/potencia",
       "Expresión segura en n (rpm) o w (rad/s); por valores: par constante y luego potencia constante"]],
     [3.4, 6.6, 6.8])
-L("<b>Movimiento impuesto</b>: la entrada sigue exactamente el perfil y se calcula el par requerido.",
-  "<b>Evaluación de capacidad</b>: además compara el par requerido con el disponible. En la integración temporal "
-  "el motor <b>pierde sincronismo</b> si no le alcanza el par: se satura, la entrada se retrasa y vuelve a "
-  "engancharse cuando iguala la velocidad del perfil.",
+L("La trayectoria la dicta siempre el preset del régimen cinemático; el motor se <b>evalúa por su capacidad</b> "
+  "(compara el par requerido con el disponible). En la integración temporal el motor <b>pierde sincronismo</b> si "
+  "no le alcanza el par: se satura, la entrada se retrasa y vuelve a engancharse cuando iguala la velocidad del "
+  "perfil.",
   "La potencia nominal es capacidad de régimen continuo, no potencia entregada. Sin datos suficientes el "
   "resultado es <b>Indeterminado</b>, nunca «Viable».",
   "<b>Inercia de entrada</b> (motor + piñón, kg·mm²): 0 significa «sin masa» (no se asume ningún valor).")
-H2("5.3 Cargas externas")
+H2("5.3 Los presets imponen la física")
+P("Al aplicar un preset en el régimen cinemático se cargan también su motor, su carga externa y sus inercias "
+  "(escenario «asociado al preset»; si el usuario guardó uno propio para ese preset, se usa el suyo). Cada preset "
+  "representa una aplicación:")
+TAB([["Preset", "Aplicación", "Salida (modo realista)"],
+     ["Arranque y parada suaves", "Tambor de banda transportadora", "60 rpm, rampas de 3 s, 8 N·m, 0,05 kg·m²"],
+     ["Oscilador 100 Hz", "Alimentador vibratorio de cuenco", "±0,5° a 100 Hz, 2×10⁻⁴ kg·m²"],
+     ["Backlash", "Ensayo de holgura", "±5°, par de prueba que se invierte con el giro, 10⁻³ kg·m²"],
+     ["Giro de 90°", "Actuador de válvula de cuarto de vuelta", "90° en 4 s, 20 N·m, 2×10⁻³ kg·m²"],
+     ["Giro de 180°", "Volteador / pick-and-place", "180° en 1 s, 0,5 N·m, 0,01 kg·m²"],
+     ["Indexer", "Mesa indexadora de 4 estaciones", "90° en 0,5 s + 2,5 s de permanencia, 0,0265 kg·m²"],
+     ["Lavadora", "Tambor de lavadora (lavado)", "±360° a 0,25 Hz, par de volteo ∝ ω, 0,25 kg·m²"],
+     ["Vibrador", "Vibrador de baja frecuencia", "±3° a 15 Hz, amortiguamiento viscoso, 5×10⁻⁴ kg·m²"]],
+    [3.6, 5.4, 7.8])
+L("<b>Modo seguro para banco de pruebas</b> (Ajustes → Simulación, activo por defecto): stepper PK244-01B, sin "
+  "carga externa e inercias del banco (rotor del motor y engranaje de 7075 con 4 mm de espesor, estimación "
+  "geométrica). La forma del movimiento es la de la aplicación; solo se estira el tiempo hasta que la entrada no "
+  "pase de 600 rpm y el par requerido quede por debajo de la mitad del par de salida.",
+  "<b>Modo realista</b> (opción apagada): valores de la aplicación en la salida; la entrada se obtiene con la "
+  "relación nominal del mecanismo (la velocidad se multiplica por i y el par se divide entre i) y el motor se "
+  "dimensiona automáticamente: stepper NEMA 17/23/34 (factor de seguridad 2) para posicionar o AC 4 polos con "
+  "variador (0,09–4 kW) para giro continuo.",
+  "Los valores son datos de partida editables, con su origen anotado en el informe del editor; no sustituyen los "
+  "de una máquina real.")
+H2("5.4 Cargas externas")
 FIG("editor_cargas", "Figura 5. Cargas: variable independiente, ley, punto de aplicación e inercia de la salida.")
 L("Variable independiente: tiempo T(t), posición T(θ) o velocidad T(ω) del componente donde se aplica (en la "
   "cremallera, x en mm y v en mm/s).",
@@ -276,7 +302,7 @@ L("Variable independiente: tiempo T(t), posición T(θ) o velocidad T(ω) del co
   "Aplicación: componente de salida o eje de entrada.",
   "<b>Inercia de la salida</b> (kg·mm²; masa en kg para la cremallera o el carro) y, en el Planetario, la "
   "inercia de giro propio de cada planeta.")
-H2("5.4 Contacto")
+H2("5.5 Contacto")
 FIG("editor_contacto", "Figura 6. Contacto: formulación, rigidez, tolerancia y amortiguamiento.")
 TAB([["Formulación", "Qué hace", "Cuándo usarla"],
      ["Penalización elástica unilateral", "F = k·δ (+ c·δ̇) si δ > 0; reparto por compatibilidad",
@@ -289,7 +315,7 @@ L("<b>Rigidez normal equivalente</b> (N/mm por contacto): dato de entrada; con 0
   "<b>Tolerancia de brecha</b> (mm): una separación menor se considera contacto.",
   "<b>Amortiguamiento normal</b> (N·s/mm): solo con penalización; actúa con velocidades relativas no nulas.",
   "La tabla «Componentes y restricciones» lista cada cuerpo, su vínculo y sus contactos activos.")
-H2("5.5 Solucionador")
+H2("5.6 Solucionador")
 FIG("editor_solucionador", "Figura 7. Solucionador: método, paso de integración, tolerancias y diagnóstico.")
 TAB([["Método", "Descripción"],
      ["Integración temporal (dinámica de contacto) — predeterminado",
@@ -302,7 +328,7 @@ TAB([["Método", "Descripción"],
 L("Tolerancias: equilibrio en N (traslaciones) y momento en N·mm (giros); máximo de iteraciones.",
   "«Estimar costo» mide tres muestras reales y extrapola (estimación); al terminar se informa la duración medida.",
   "Ejecutar / Cancelar: el cálculo corre en segundo plano; la ventana sigue respondiendo.")
-H2("5.6 Resultados")
+H2("5.7 Resultados")
 FIG("editor_par_t", "Figura 8. T(t): [Prescrita] discontinua, [Motor] punteada, [Calculada] continua.")
 L("<b>T(t), T(θ), T(ω)</b>: carga prescrita, par motor calculado y, en capacidad, par disponible. T(θ) y T(ω) "
   "son curvas paramétricas (pueden ser multivaluadas).",
@@ -336,7 +362,8 @@ TAB([["Pestaña", "Opciones principales"],
      ["General", "Restaurar sesión, confirmar al salir, guardado automático, avisos, sobrescritura"],
      ["Cálculo y precisión", "Decimales mostrados (no redondea el cálculo), muestreo uniforme/adaptativo, "
                              "desviaciones lineal y angular, estimación de costo"],
-     ["Simulación y rendimiento", "FPS, menos FPS en ventana inactiva, render Software/OpenGL, CPU/GPU/Híbrido, "
+     ["Simulación y rendimiento", "<b>Modo seguro para banco de pruebas</b>, FPS, menos FPS en ventana inactiva, "
+                                  "render Software/OpenGL, CPU/GPU/Híbrido, "
                                   "detener ante estado inválido, conservar pausa, caché de geometría y "
                                   "<b>simulación basada en contacto</b>"],
      ["Apariencia", "Presets de tema, colores de interfaz y técnicos, trazos, tipografías y antialias"],

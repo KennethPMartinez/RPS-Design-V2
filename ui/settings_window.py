@@ -22,7 +22,7 @@ from ui.theme_manager import ThemeManager
 ALIAS_WIDGETS = {
     'btnCancelar': 'pushButton_2', 'btnAplicar': 'pushButton_3', 'btnAceptar': 'pushButton_4',
     'btnRestaurar': 'pushButton', 'chkRestaurarSesion': 'checkBox', 'chkConfirmarSalir': 'checkBox_2',
-    'chkSimulacionPorContacto': 'checkBox_3',
+    'chkSimulacionPorContacto': 'checkBox_3', 'chkModoSeguroBanco': 'chkBajarFPSInactivo_2',
 }
 # Campos de video que el .ui del repo no trae (solo sus etiquetas): `_completar_campos_video` los CREA en código dentro
 # de las filas existentes. Si algún día se añaden en Designer con estos nombres, se usan tal cual.
@@ -191,7 +191,7 @@ class SettingsWindow(QtCore.QObject):
                 'chkMostrarEstimacion':c.mostrar_estimacion,'chkVSync':s.vsync_solicitado,
                 'chkBajarFPSInactivo':s.bajar_fps_inactivo,'chkDetenerInvalido':s.detener_invalido,
                 'chkConservarPausa':s.conservar_pausa,'chkCacheGeometria':s.cache_geometria,
-                'chkSimulacionPorContacto':s.basada_en_contacto,'chkAntialias':a.antialias,
+                'chkSimulacionPorContacto':s.basada_en_contacto,'chkModoSeguroBanco':s.modo_seguro_banco,'chkAntialias':a.antialias,
                 'chkFuenteUIBold':a.negrita_ui,'chkFuenteGraficaBold':a.negrita_graficas,
                 'chkMantenerAspectoImagen':e.mantener_aspecto_imagen,'chkFondoTransparente':e.fondo_transparente,
                 'chkAntialiasExport':e.antialias_export,'chkRelacionVideo':e.mantener_aspecto_video,
@@ -302,7 +302,7 @@ class SettingsWindow(QtCore.QObject):
         for obj,key in [('chkVSync','vsync_solicitado'),('chkBajarFPSInactivo','bajar_fps_inactivo'),
                         ('chkDetenerInvalido','detener_invalido'),('chkConservarPausa','conservar_pausa'),
                         ('chkCacheGeometria','cache_geometria'),
-                        ('chkSimulacionPorContacto','basada_en_contacto')]:
+                        ('chkSimulacionPorContacto','basada_en_contacto'),('chkModoSeguroBanco','modo_seguro_banco')]:
             setattr(s,key,self.w(obj).isChecked())
         a.preset=self.w('comboTema').currentText()
         a.ui_colores=self._get_tree('treeColoresUI')

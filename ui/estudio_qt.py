@@ -188,7 +188,7 @@ class GestorEstudio(QtCore.QObject):
             avisos = []
             lt = self.v.linea_tiempo_para(perfil_mov, avisos)      # mismo escalado/desplazamiento/recorte que la simulación
             ad = self.adaptador()
-            err = escenario.motor.validar() if escenario.motor.modo.startswith("Evaluación") else []
+            err = list(escenario.motor.validar())
             err += escenario.carga.validar()
             from engine.estudio_fisico import METODO_DINAMICO
             from engine import contacto_fisico as cf

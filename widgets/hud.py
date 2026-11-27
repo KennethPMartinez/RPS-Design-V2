@@ -132,6 +132,7 @@ class HUDMixin:
         self.lbl_fps.setVisible(bool(lineas))
         self.lbl_fps.setText("\n".join(lineas))
         self.lbl_fps.adjustSize()
+        self.lbl_fps.raise_()            # un viewport nuevo (OpenGL ⇄ software) queda encima y lo tapaba
 
     # -- fuerzas calculadas sobre la geometría ----------------------------------------------------
     def set_fuerzas(self, px=None, py=None, fx=None, fy=None, texto: str = "") -> None:

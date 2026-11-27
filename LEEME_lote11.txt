@@ -1,0 +1,8 @@
+LOTE 11 - Los presets imponen la física (26-nov-2026) · entrega 261120263
+Copiar el contenido del zip sobre la carpeta del proyecto respetando las carpetas (sobrescribir).
+Parte de tu repo actual (commit 267b8df, con tus cambios en Ajustes y en el editor). No hay que borrar nada.
+Después:  python -m pytest tests --ignore=tests/RPS_Ajustes_Claude --ignore=tests/test_motor_plan.py
+          python main.py
+Uso: Ajustes → Simulación → «Modo seguro para banco de pruebas» (activo = banco con PK244-01B; apagado = valores
+realistas con motor dimensionado). En el editor, «Aplicar» un preset impone motor, carga e inercias.
+Detalle en progress.md §20 y en la guía (Info → Guía técnica, §5.3).

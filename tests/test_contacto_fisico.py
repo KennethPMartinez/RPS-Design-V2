@@ -227,10 +227,12 @@ class CargasYMotor(unittest.TestCase):
                 np.testing.assert_allclose(x, r.arr("v_salida"))
 
     def test_motores(self):
-        ac_ = acc.ModeloMotor(acc.AC, potencia_nominal_w=750, velocidad_nominal_rpm=1440)
+        ac_ = acc.ModeloMotor(acc.AC, potencia_nominal_w=750)          # 4 polos, 50 Hz, con variador
         self.assertEqual(ac_.velocidad_sincrona_rpm, 1500.0)
-        self.assertAlmostEqual(ac_.par_disponible(1500)[0], 0.0)
-        self.assertIsNone(ac_.par_disponible(100)[0])
+        t_nom = 750 / (0.95 * 1500 * math.pi / 30)
+        self.assertAlmostEqual(ac_.par_disponible(100)[0], t_nom, places=6)     # par constante a baja velocidad
+        self.assertAlmostEqual(ac_.par_disponible(3000)[0], 750 / (3000 * math.pi / 30), places=6)
+        self.assertIsNone(ac_.par_disponible(3100)[0])
         st = acc.ModeloMotor(acc.STEPPER, par_retencion_nm=0.4)
         self.assertEqual(st.par_disponible(0)[0], 0.4)
         self.assertIsNone(st.par_disponible(30)[0])                 # retención ≠ par a toda velocidad
@@ -423,3 +425,53 @@ class Optimizacion(unittest.TestCase):
         from utils.guia import RUTA_GUIA
         self.assertTrue(RUTA_GUIA.exists())
         self.assertGreater(RUTA_GUIA.stat().st_size, 100_000)
+
+
+class PresetsFisicos(unittest.TestCase):
+    """Los presets imponen la física: modo seguro del banco (PK244-01B) o valores realistas dimensionados."""
+
+    def test_pk244_desde_la_ficha(self):
+        from engine import presets_fisicos as pf
+        m = pf.motor_pk244()
+        self.assertEqual(m.par_retencion_nm, 0.26)
+        self.assertEqual(pf.PK244_J_KG_MM2, 5.4)                       # 54×10⁻⁷ kg·m²
+        self.assertAlmostEqual(m.par_disponible(500)[0], 0.19)
+        self.assertTrue(13 < m.potencia_nominal_w < 16)
+
+    def test_estirar_conserva_posiciones(self):
+        from engine.presets_fisicos import estirar_perfil
+        for nombre in FabricaPresets.NOMBRES:
+            p = FabricaPresets.crear(nombre)
+            a = LineaTiempo.construir(p, RegistroLeyes(), 4001)
+            b = LineaTiempo.construir(estirar_perfil(p, 2.0), RegistroLeyes(), 4001)
+            np.testing.assert_allclose(b.pos, a.pos, atol=1e-6 * max(1.0, np.abs(a.pos).max()), err_msg=nombre)
+            np.testing.assert_allclose(b.vel, a.vel / 2.0, atol=1e-3 * max(1.0, np.abs(a.vel).max()), err_msg=nombre)
+
+    def test_modo_seguro_y_realista(self):
+        from engine import presets_fisicos as pf
+        ctx = pf.Contexto(relacion=-1.0, inercia_salida_banco_kg_mm2=9.0)
+        for nombre in FabricaPresets.NOMBRES:
+            g = pf.generar(nombre, ctx, True)
+            lt = LineaTiempo.construir(g["perfil"], RegistroLeyes(), 4000)
+            self.assertLessEqual(np.abs(lt.vel).max() / 6.0, pf.RPM_MAX_BANCO + 1e-6, nombre)
+            self.assertEqual(g["motor"].par_retencion_nm, 0.26)
+            self.assertTrue(g["carga"].es_nula, nombre)                   # el banco trabaja sin carga
+            T = pf._par_requerido(lt, g["inercia_entrada"], g["inercia_salida"], -1.0, g["carga"], False, 0.0)
+            disp = np.array([g["motor"].par_disponible(n)[0] for n in np.abs(lt.vel) / 6.0])
+            self.assertTrue(np.all(np.abs(T) * pf.FS_STEPPER <= disp + 1e-9), nombre)
+            r = pf.generar(nombre, ctx, False)
+            ltr = LineaTiempo.construir(r["perfil"], RegistroLeyes(), 4000)
+            Tr = pf._par_requerido(ltr, r["inercia_entrada"], r["inercia_salida"], -1.0, r["carga"], False, 0.0)
+            dr = np.array([r["motor"].par_disponible(n)[0] for n in np.abs(ltr.vel) / 6.0])
+            self.assertTrue(np.all(np.abs(Tr) <= dr + 1e-9), nombre)      # motor dimensionado cubre el par
+
+    def test_relacion_multiplica_velocidad_y_divide_par(self):
+        from engine import presets_fisicos as pf
+        a = pf.generar("Giro de 90°", pf.Contexto(relacion=0.25), False)
+        b = pf.generar("Giro de 90°", pf.Contexto(relacion=0.5), False)
+        la = LineaTiempo.construir(a["perfil"], RegistroLeyes())
+        lb = LineaTiempo.construir(b["perfil"], RegistroLeyes())
+        self.assertAlmostEqual(np.abs(la.pos).max(), 2 * np.abs(lb.pos).max(), places=6)   # entrada = salida·i
+        Ta = pf._par_requerido(la, 0, 0, 0.25, a["carga"], False, 0)
+        Tb = pf._par_requerido(lb, 0, 0, 0.5, b["carga"], False, 0)
+        self.assertAlmostEqual(np.abs(Ta).max() * 2, np.abs(Tb).max(), places=6)

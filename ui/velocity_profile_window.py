@@ -427,7 +427,12 @@ class VentanaPerfilVelocidad(QtWidgets.QMainWindow):
     @manejador_seguro
     def _aplicar_preset(self, *_):
         self._pausar()
-        self.perfil = self._encajar_preset(FabricaPresets.crear(self.ui.comboBox_preset.currentText()))
+        nombre = self.ui.comboBox_preset.currentText()
+        g = self._preset_fisico(nombre)
+        self.perfil = self._encajar_preset(g["perfil"] if g else FabricaPresets.crear(nombre))
+        if g and getattr(self, "dinamico", None) is not None:
+            self.dinamico.aplicar_preset_fisico(g, nombre)
+            self._msg_preset = (self._msg_preset + " " if self._msg_preset else "") + g["informe"][-1]
         self._sincronizar_todo(0)
         self._marcar_curva_de_entrada()
         self._t = 0.0
@@ -435,6 +440,21 @@ class VentanaPerfilVelocidad(QtWidgets.QMainWindow):
         if self._msg_preset:
             self.statusBar().showMessage(self._msg_preset, 6000)
             self._msg_preset = ""
+
+    def _preset_fisico(self, nombre: str):
+        """Preset con su física (engine.presets_fisicos): modo seguro del banco o valores realistas según Ajustes,
+        con la relación de transmisión nominal del mecanismo de la ventana que abrió el editor."""
+        v = self.parent()
+        if v is None or getattr(v, "motor_actual", None) is None:
+            return None
+        try:
+            from engine import presets_fisicos as pf
+            from ui.ajustes_runtime import runtime
+            seguro = bool(getattr(runtime.estado.simulacion, "modo_seguro_banco", True))
+            return pf.generar(nombre, pf.contexto_de_ventana(v), seguro)
+        except Exception as e:
+            print(f"[presets] no se pudo generar la física del preset {nombre}: {e}")
+            return None
 
     def _encajar_preset(self, perfil):
         """Con un rango de recorrido el preset se escala para que el piñón no se salga."""
