@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import math
 
+import numpy as np
+
 from PySide6 import QtCore, QtWidgets
 
 from config.data_structures import Componente, ParametrosPlanetario
@@ -171,6 +173,34 @@ class VentanaPlanetario(VentanaSistemaBase):
         self.perfilActualizado.emit(motor)
         self._emitir_estado()
         self.statusBar().showMessage(motor.razones_texto(), 6000)
+
+    def _mapa_salida(self, angulo_grados: float) -> float:
+        """Ángulo (°) del componente libre (salida) por Willis: k_salida·θ_entrada."""
+        e = self.motor_actual
+        ent, blo = self.leer_parametros().componente_entrada, self.leer_parametros().componente_bloqueado
+        libre = ({Componente.SOL, Componente.BRAZO, Componente.ANULAR} - {ent, blo}).pop()
+        k = {Componente.SOL: e.k_sol, Componente.BRAZO: e.k_brazo, Componente.ANULAR: e.k_anular}[libre]
+        return k * angulo_grados
+
+    def _aplicar_desviacion(self, est, q, factor: float):
+        """Salida = componente libre (+ q0) y giro propio de cada planeta (+ q_p), amplificados para visualizar."""
+        import copy as _c
+        e = _c.copy(est)
+        ent, blo = self.leer_parametros().componente_entrada, self.leer_parametros().componente_bloqueado
+        libre = ({Componente.SOL, Componente.BRAZO, Componente.ANULAR} - {ent, blo}).pop()
+        d = float(q[0]) * factor
+        if libre == Componente.SOL:
+            e.fi_sol = est.fi_sol + d
+        elif libre == Componente.ANULAR:
+            e.fi_anular = est.fi_anular + d
+        else:
+            e.fi_brazo = est.fi_brazo + d
+            e.gamma = est.gamma + d
+            cd = self.motor_actual.cd
+            e.centros = cd * np.column_stack((np.cos(e.gamma), np.sin(e.gamma)))
+        if len(q) > 1:
+            e.psi = est.psi + factor * np.asarray(q[1:], float)[: len(est.psi)]
+        return e
 
     def _estado_para(self, angulo_grados: float):
         est = self.motor_actual.estado(math.radians(angulo_grados))

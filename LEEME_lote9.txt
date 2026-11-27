@@ -1,0 +1,20 @@
+LOTE 9 - Régimen dinámico / contacto (26-nov-2026) · entrega 261120261
+Copiar el contenido del zip sobre la carpeta del proyecto, respetando las carpetas (sobrescribir).
+No hay que borrar nada. (Pendiente del lote 5: tests/test_motor_plan.py sigue en tests/ y falla al
+recolectar porque su versión vigente está en banco_legacy/; puede borrarse.)
+
+Después:  python -m pytest tests --ignore=tests/RPS_Ajustes_Claude --ignore=tests/test_motor_plan.py
+          python main.py
+Para usar el régimen de contacto: Ajustes → Simulación → «Habilitar análisis basado en contacto».
+
+Archivos NUEVOS:
+  engine/contacto_fisico.py, engine/mecanismos_fisicos.py, engine/accionamiento.py, engine/cargas.py,
+  engine/estudio_fisico.py, ui/estudio_qt.py, ui/regimen_dinamico.py, widgets/hud.py,
+  tests/test_contacto_fisico.py, tests/test_regimen_qt.py, LEEME_lote9.txt
+Archivos MODIFICADOS:
+  ui/designer/Epi_HipotrocoidalV2.ui/.py, ui/designer/TrocoidalV2.ui/.py, ui/designer/PlanetarioV2.ui/.py
+  (lblEstadoSolucionador + btnVerResultados; .py regenerados con pyside6-uic),
+  ui/sistema_base.py, ui/planetary_window.py, ui/velocity_profile_window.py, ui/settings_window.py (comentario),
+  utils/file_handler.py, widgets/plot_menu.py, widgets/pg_helpers.py, widgets/simulation_view.py,
+  widgets/planetary_view.py, engine/motion_engine.py (solo imports/comentarios duplicados), progress.md (§18)
+Sin cambios: todo lo demás (Ajustes.ui y Perfildevelocidad_simulador_Window.ui/.py se usan tal como están en el repo).

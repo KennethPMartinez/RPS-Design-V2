@@ -87,10 +87,14 @@ def _con_margen(lo: float, hi: float, frac: float = 0.05):
     return lo - d * frac, hi + d * frac
 
 
+UNIDADES_HUD = ("rpm", "rad/s", "°/s")
+
+
 class MenuGrafica(QtCore.QObject):
     transformadaCambiada = QtCore.Signal(str)
+    indicadoresCambiados = QtCore.Signal(dict)     # {"fps", "velocidades", "relacion", "unidad"}
 
-    def __init__(self, plot: pg.PlotWidget, titulo: str, transformadas: bool = False):
+    def __init__(self, plot: pg.PlotWidget, titulo: str, transformadas: bool = False, indicadores: bool = False):
         super().__init__(plot)
         self._plot, self._titulo = plot, titulo
         self.modo_transformada = "ninguna"
@@ -102,6 +106,8 @@ class MenuGrafica(QtCore.QObject):
         self._vb.raiseContextMenu = self._mostrar     # y aquí se muestra NUESTRO menú
         plot.scene().contextMenu = []                 # sin el "Export..." genérico de la escena
         self._acc: dict = {}
+        self._indicadores = {"fps": True, "velocidades": True, "relacion": False, "unidad": "rpm", "amplificacion": 1}
+        self._con_indicadores = indicadores
         self._menu = self._construir(transformadas)
 
     # ------------------------------------------------------------------ construcción
@@ -138,6 +144,22 @@ class MenuGrafica(QtCore.QObject):
             gt = QtGui.QActionGroup(tr)
             for clave, texto in TRANSFORMADAS:
                 self._acc[f"tr_{clave}"] = self._accion(tr, texto, partial(self._set_transformada, clave), True, gt)
+        if self._con_indicadores:          # HUD de las ventanas de simulación (FPS, velocidades, relación, unidades)
+            ind = opc.addMenu("Indicadores en pantalla")
+            for clave, texto in (("fps", "FPS"), ("velocidades", "Velocidades instantáneas (entrada y salida)"),
+                                 ("relacion", "Relación de transmisión instantánea")):
+                self._acc[f"hud_{clave}"] = self._accion(ind, texto, partial(self._set_indicador, clave), True)
+            uni = ind.addMenu("Unidades angulares")
+            gu = QtGui.QActionGroup(uni)
+            for u in UNIDADES_HUD:
+                self._acc[f"hud_u_{u}"] = self._accion(uni, u, partial(self._set_unidad_hud, u), True, gu)
+            nota = QtGui.QAction("La cremallera se muestra siempre en mm/s", uni)
+            nota.setEnabled(False)
+            uni.addAction(nota)
+            amp = ind.addMenu("Amplificación de deformaciones (contacto)")
+            ga = QtGui.QActionGroup(amp)
+            for f in (1, 10, 100, 1000):
+                self._acc[f"hud_a_{f}"] = self._accion(amp, f"×{f}", partial(self._set_amplificacion, f), True, ga)
         m.addSeparator()
         self._accion(m, "Exportar imagen…", self._exportar)
         m.aboutToShow.connect(self._sincronizar)
@@ -151,6 +173,12 @@ class MenuGrafica(QtCore.QObject):
         estado["pan"] = not estado["zoom"]
         for clave, _ in TRANSFORMADAS:
             estado[f"tr_{clave}"] = clave == self.modo_transformada
+        for clave in ("fps", "velocidades", "relacion"):
+            estado[f"hud_{clave}"] = self._indicadores.get(clave, False)
+        for u in UNIDADES_HUD:
+            estado[f"hud_u_{u}"] = self._indicadores.get("unidad") == u
+        for f in (1, 10, 100, 1000):
+            estado[f"hud_a_{f}"] = int(self._indicadores.get("amplificacion", 1)) == f
         for k, v in estado.items():
             a = self._acc.get(k)
             if a is not None:
@@ -213,6 +241,26 @@ class MenuGrafica(QtCore.QObject):
         if marcado and clave != self.modo_transformada:
             self.modo_transformada = clave
             self.transformadaCambiada.emit(clave)
+
+    def set_indicadores(self, d: dict) -> None:
+        self._indicadores = dict(self._indicadores, **d)
+
+    def indicadores(self) -> dict:
+        return dict(self._indicadores)
+
+    def _set_indicador(self, clave: str, v: bool):
+        self._indicadores[clave] = bool(v)
+        self.indicadoresCambiados.emit(dict(self._indicadores))
+
+    def _set_amplificacion(self, f: int, marcado: bool):
+        if marcado:
+            self._indicadores["amplificacion"] = int(f)
+            self.indicadoresCambiados.emit(dict(self._indicadores))
+
+    def _set_unidad_hud(self, u: str, marcado: bool):
+        if marcado:
+            self._indicadores["unidad"] = u
+            self.indicadoresCambiados.emit(dict(self._indicadores))
 
     def _exportar(self):
         from exporters.image_exporter import exportar_con_dialogo

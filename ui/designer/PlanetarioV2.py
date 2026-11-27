@@ -27,7 +27,7 @@ class Ui_PlanetarioV2(object):
     def setupUi(self, PlanetarioV2):
         if not PlanetarioV2.objectName():
             PlanetarioV2.setObjectName(u"PlanetarioV2")
-        PlanetarioV2.resize(1152, 894)
+        PlanetarioV2.resize(1152, 904)
         self.actionAbrir = QAction(PlanetarioV2)
         self.actionAbrir.setObjectName(u"actionAbrir")
         self.actionGuardar = QAction(PlanetarioV2)
@@ -432,6 +432,18 @@ class Ui_PlanetarioV2(object):
 
         self.gridLayout_3.addWidget(self.checkBox_valpredeterminados, 2, 0, 1, 4)
 
+        self.lblEstadoSolucionador = QLabel(self.groupBox_2)
+        self.lblEstadoSolucionador.setObjectName(u"lblEstadoSolucionador")
+        self.lblEstadoSolucionador.setWordWrap(True)
+
+        self.gridLayout_3.addWidget(self.lblEstadoSolucionador, 3, 0, 1, 4)
+
+        self.btnVerResultados = QPushButton(self.groupBox_2)
+        self.btnVerResultados.setObjectName(u"btnVerResultados")
+        self.btnVerResultados.setEnabled(False)
+
+        self.gridLayout_3.addWidget(self.btnVerResultados, 4, 0, 1, 4)
+
 
         self.gridLayout_6.addWidget(self.groupBox_2, 5, 1, 1, 1)
 
@@ -504,7 +516,8 @@ class Ui_PlanetarioV2(object):
         QWidget.setTabOrder(self.doubleSpinBox_posicion_theta, self.dial_posicion_theta)
         QWidget.setTabOrder(self.dial_posicion_theta, self.Editarlineadetiempo_button)
         QWidget.setTabOrder(self.Editarlineadetiempo_button, self.checkBox_valpredeterminados)
-        QWidget.setTabOrder(self.checkBox_valpredeterminados, self.pushButton_anim_play)
+        QWidget.setTabOrder(self.checkBox_valpredeterminados, self.btnVerResultados)
+        QWidget.setTabOrder(self.btnVerResultados, self.pushButton_anim_play)
         QWidget.setTabOrder(self.pushButton_anim_play, self.pushButton_anim_pause)
 
         self.menubar.addAction(self.menuArchivo.menuAction())
@@ -575,6 +588,14 @@ class Ui_PlanetarioV2(object):
         self.pushButton_restart.setText(QCoreApplication.translate("PlanetarioV2", u"\U0001f504", None))
         self.Editarlineadetiempo_button.setText(QCoreApplication.translate("PlanetarioV2", u"Editar linea de tiempo", None))
         self.checkBox_valpredeterminados.setText(QCoreApplication.translate("PlanetarioV2", u"Valores predeterminados", None))
+#if QT_CONFIG(tooltip)
+        self.lblEstadoSolucionador.setToolTip(QCoreApplication.translate("PlanetarioV2", u"Estado del estudio f\u00edsico (r\u00e9gimen de contacto). Se ejecuta desde el editor de reg\u00edmenes.", None))
+#endif // QT_CONFIG(tooltip)
+        self.lblEstadoSolucionador.setText(QCoreApplication.translate("PlanetarioV2", u"Estudio f\u00edsico: Sin estudio", None))
+#if QT_CONFIG(tooltip)
+        self.btnVerResultados.setToolTip(QCoreApplication.translate("PlanetarioV2", u"Consultar el estudio f\u00edsico v\u00e1lido e inspeccionarlo sobre la geometr\u00eda.", None))
+#endif // QT_CONFIG(tooltip)
+        self.btnVerResultados.setText(QCoreApplication.translate("PlanetarioV2", u"Ver resultados", None))
         self.groupBox_4.setTitle(QCoreApplication.translate("PlanetarioV2", u"Opciones de Simulaci\u00f3n", None))
         self.pushButton_mostrar_ocultar.setText(QCoreApplication.translate("PlanetarioV2", u"Mostrar/Ocultar", None))
         self.pushButton_sim_reset.setText(QCoreApplication.translate("PlanetarioV2", u"Reset", None))

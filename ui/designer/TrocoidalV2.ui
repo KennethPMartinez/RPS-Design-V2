@@ -566,6 +566,32 @@
             </property>
            </widget>
           </item>
+          <item row="3" column="0" colspan="4">
+           <widget class="QLabel" name="lblEstadoSolucionador">
+            <property name="toolTip">
+             <string>Estado del estudio físico (régimen de contacto). Se ejecuta desde el editor de regímenes.</string>
+            </property>
+            <property name="text">
+             <string>Estudio físico: Sin estudio</string>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0" colspan="4">
+           <widget class="QPushButton" name="btnVerResultados">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="toolTip">
+             <string>Consultar el estudio físico válido e inspeccionarlo sobre la geometría.</string>
+            </property>
+            <property name="text">
+             <string>Ver resultados</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -1036,6 +1062,7 @@ mínimo
   <tabstop>pushButton_sim_reset</tabstop>
   <tabstop>Editarlineadetiempo_button</tabstop>
   <tabstop>checkBox_valpredeterminados</tabstop>
+  <tabstop>btnVerResultados</tabstop>
   <tabstop>pushButton_anim_play</tabstop>
   <tabstop>pushButton_anim_pause</tabstop>
  </tabstops>

@@ -624,7 +624,7 @@ class Ui_GiroImpuesto_window(object):
         self.scrollPaginaMotor.setWidgetResizable(True)
         self.contenidoScrollMotor = QWidget()
         self.contenidoScrollMotor.setObjectName(u"contenidoScrollMotor")
-        self.contenidoScrollMotor.setGeometry(QRect(0, 0, 662, 550))
+        self.contenidoScrollMotor.setGeometry(QRect(0, 0, 674, 544))
         self.layoutPaginaAccionamiento = QVBoxLayout(self.contenidoScrollMotor)
         self.layoutPaginaAccionamiento.setObjectName(u"layoutPaginaAccionamiento")
         self.comboTipoMotorFila = QHBoxLayout()
@@ -648,19 +648,6 @@ class Ui_GiroImpuesto_window(object):
 
         self.comboModoAccionamientoFila = QHBoxLayout()
         self.comboModoAccionamientoFila.setObjectName(u"comboModoAccionamientoFila")
-        self.lblComboModoAccionamiento = QLabel(self.contenidoScrollMotor)
-        self.lblComboModoAccionamiento.setObjectName(u"lblComboModoAccionamiento")
-        self.lblComboModoAccionamiento.setWordWrap(True)
-
-        self.comboModoAccionamientoFila.addWidget(self.lblComboModoAccionamiento)
-
-        self.comboModoAccionamiento = QComboBox(self.contenidoScrollMotor)
-        self.comboModoAccionamiento.addItem("")
-        self.comboModoAccionamiento.addItem("")
-        self.comboModoAccionamiento.setObjectName(u"comboModoAccionamiento")
-
-        self.comboModoAccionamientoFila.addWidget(self.comboModoAccionamiento)
-
 
         self.layoutPaginaAccionamiento.addLayout(self.comboModoAccionamientoFila)
 
@@ -686,21 +673,6 @@ class Ui_GiroImpuesto_window(object):
 
         self.spinVelocidadNominalFila = QHBoxLayout()
         self.spinVelocidadNominalFila.setObjectName(u"spinVelocidadNominalFila")
-        self.lblSpinVelocidadNominal = QLabel(self.contenidoScrollMotor)
-        self.lblSpinVelocidadNominal.setObjectName(u"lblSpinVelocidadNominal")
-        self.lblSpinVelocidadNominal.setWordWrap(True)
-
-        self.spinVelocidadNominalFila.addWidget(self.lblSpinVelocidadNominal)
-
-        self.spinVelocidadNominal = QDoubleSpinBox(self.contenidoScrollMotor)
-        self.spinVelocidadNominal.setObjectName(u"spinVelocidadNominal")
-        self.spinVelocidadNominal.setDecimals(3)
-        self.spinVelocidadNominal.setMinimum(0.000000000000000)
-        self.spinVelocidadNominal.setMaximum(100000.000000000000000)
-        self.spinVelocidadNominal.setSingleStep(0.001000000000000)
-
-        self.spinVelocidadNominalFila.addWidget(self.spinVelocidadNominal)
-
 
         self.layoutPaginaAccionamiento.addLayout(self.spinVelocidadNominalFila)
 
@@ -1673,14 +1645,8 @@ class Ui_GiroImpuesto_window(object):
         self.comboTipoMotor.setItemText(1, QCoreApplication.translate("GiroImpuesto_window", u"AC \u2014 4 polos, 50 Hz (1500 rpm s\u00edncronas)", None))
         self.comboTipoMotor.setItemText(2, QCoreApplication.translate("GiroImpuesto_window", u"Custom \u2014 parametrizaci\u00f3n obligatoria", None))
 
-        self.lblComboModoAccionamiento.setText(QCoreApplication.translate("GiroImpuesto_window", u"Modo de evaluaci\u00f3n", None))
-        self.comboModoAccionamiento.setItemText(0, QCoreApplication.translate("GiroImpuesto_window", u"Movimiento impuesto", None))
-        self.comboModoAccionamiento.setItemText(1, QCoreApplication.translate("GiroImpuesto_window", u"Evaluaci\u00f3n de capacidad del motor", None))
-
         self.lblSpinPotenciaNominal.setText(QCoreApplication.translate("GiroImpuesto_window", u"Potencia mec\u00e1nica nominal", None))
         self.spinPotenciaNominal.setSuffix(QCoreApplication.translate("GiroImpuesto_window", u" W", None))
-        self.lblSpinVelocidadNominal.setText(QCoreApplication.translate("GiroImpuesto_window", u"Velocidad nominal", None))
-        self.spinVelocidadNominal.setSuffix(QCoreApplication.translate("GiroImpuesto_window", u" rpm", None))
         self.lblSpinParRetencion.setText(QCoreApplication.translate("GiroImpuesto_window", u"Par de retenci\u00f3n (Stepper)", None))
         self.spinParRetencion.setSuffix(QCoreApplication.translate("GiroImpuesto_window", u" N\u00b7m", None))
         self.lblSpinFrecuenciaRed.setText(QCoreApplication.translate("GiroImpuesto_window", u"Frecuencia de red (AC)", None))

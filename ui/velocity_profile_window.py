@@ -7,6 +7,10 @@ giro de la rueda motriz para el modo AUTOMÁTICO (modelo/motores en engine/motio
 
   Aceptar  -> emite `perfilAceptado(PerfilMovimiento)` y cierra.   Cancelar -> cierra sin cambios.
 
+Editor de REGÍMENES: pestaña «Régimen cinemático» (este controlador, sin cambios de comportamiento) y
+pestaña «Régimen dinámico / contacto» (ui/regimen_dinamico.py, ligada al GestorEstudio de la ventana de
+sistema que abrió el editor).
+
 Páginas del QStackedWidget: 0 rampas · 1 sinusoidal · 2 polinómica · 3 lista de puntos · 4 spline.
 Menú contextual de la gráfica: en español, con Transformadas (FFT, derivada, integral) que solo
 cambian lo que se DIBUJA; el perfil no se toca.
@@ -66,6 +70,10 @@ class VentanaPerfilVelocidad(QtWidgets.QMainWindow):
         self.timer = QtCore.QTimer(self)
         self.timer.setInterval(16)
         self.timer.timeout.connect(self._tick)
+        # Régimen dinámico / contacto (pestaña tabDinamico): estados y resultados SEPARADOS del cinemático,
+        # misma referencia temporal (la línea de tiempo del perfil).
+        from ui.regimen_dinamico import PanelRegimenDinamico
+        self.dinamico = PanelRegimenDinamico(self)
 
     # ------------------------------------------------------------------ construcción
     def _construir_widgets(self):
@@ -87,6 +95,8 @@ class VentanaPerfilVelocidad(QtWidgets.QMainWindow):
         self.inspector = InspectorCurvas(self.plot, lambda: list(self.curvas.values()))
         embeber_en_contenedor(u.widget_grafica, self.plot)
         self.rueda = reemplazar_widget(u.graphicsView_ruedamovil, WheelWidget())
+        self.plot._retemar = self._colores_tema          # ThemeManager.apply_to_plot lo invoca al cambiar el tema
+        self._colores_tema()
         self.checks = {"Posición": u.checkBox_Posicion, "Velocidad": u.checkBox_Velocidad,
                        "Aceleración": u.checkBox_Aceleracion}
 
@@ -104,6 +114,23 @@ class VentanaPerfilVelocidad(QtWidgets.QMainWindow):
                             (u.tableWidget_Listapuntosspline, ["X (s)", "Y"])):
             tabla.setColumnCount(len(cols)); tabla.setHorizontalHeaderLabels(cols)
             tabla.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.Stretch)
+
+    ROLES_CURVAS = {"Posición": "Piñón de rodillos", "Velocidad": "Curva base", "Aceleración": "Perfil / engranaje"}
+
+    def _colores_tema(self):
+        """Curvas, marcas y rueda con los colores técnicos del tema vigente (Ajustes → Apariencia)."""
+        from widgets.pg_helpers import color_tecnico
+        for nombre, curva in self.curvas.items():
+            curva.setPen(pg.mkPen(color_tecnico(self.ROLES_CURVAS[nombre]), width=1.6))
+        self.marca_tramo.setBrush(pg.mkBrush(color_tecnico("Puntos de contacto", "#E96363")))
+        fondo = color_tecnico("Fondo de gráficas", "#1C1C21")
+        oscuro = sum(fondo) < 3 * 128
+        claro = tuple(min(255, c + (38 if oscuro else -22)) for c in fondo)
+        self.rueda.set_colores(fondo=fondo, aro=color_tecnico("Ejes de coordenadas", "#B8C2CD"), disco=claro,
+                               rayos=color_tecnico("Circunferencias de paso", "#8794A2"),
+                               aguja=color_tecnico("Piñón de rodillos", "#F2A33C"),
+                               cubo=color_tecnico("Perfil / engranaje", "#388AE6"),
+                               texto=color_tecnico("Etiquetas", "#EBEFF5"))
 
     def _conectar(self):
         u = self.ui
@@ -142,8 +169,8 @@ class VentanaPerfilVelocidad(QtWidgets.QMainWindow):
         u.actionGuardar.triggered.connect(self._guardar)
         u.actionExportar_CSV.triggered.connect(self._exportar_csv)
         u.actionCerra.triggered.connect(self.close)
-        u.actionGu_a_Tecnica.triggered.connect(lambda: QtWidgets.QMessageBox.information(
-            self, "Guía técnica", "La guía técnica se desarrollará más adelante."))
+        from utils.guia import abrir_guia
+        u.actionGu_a_Tecnica.triggered.connect(lambda *_: abrir_guia(self))
 
     # ------------------------------------------------------------------ selección y listas
     def _tramo(self):
@@ -405,12 +432,6 @@ class VentanaPerfilVelocidad(QtWidgets.QMainWindow):
         self._marcar_curva_de_entrada()
         self._t = 0.0
         self._recalcular()
-        if self._msg_preset:
-            self.statusBar().showMessage(self._msg_preset, 6000)
-            self._msg_preset = ""
-        if self._msg_preset:
-            self.statusBar().showMessage(self._msg_preset, 6000)
-            self._msg_preset = ""
         if self._msg_preset:
             self.statusBar().showMessage(self._msg_preset, 6000)
             self._msg_preset = ""

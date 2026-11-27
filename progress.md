@@ -107,6 +107,8 @@ Q2 diálogos: versión `actualizar_modo`/`HABILITACION_POR_MODO` apuntando a los
 | 2026-11-22 | Lote 6: Ajustes → General y Exportación funcionales (§14, §15). |
 | 2026-11-22 | Lote 7: Simulación y rendimiento (inválido, pausa, caché) (§16). |
 | 2026-11-22 | Lote 8: Cálculo y precisión (decimales, discretización, costo) (§17). |
+| 2026-11-26 | Lote 9 (261120261): régimen dinámico/contacto cuasiestático, editor de regímenes, HUD (§18). |
+| 2026-11-26 | Lote 10 (261120262): la dinámica de contacto gobierna la animación, OpenGL, tema, ω manual, optimización, guía PDF (§19). |
 
 ---
 
@@ -289,3 +291,126 @@ General, Exportación, Simulación (salvo V-Sync y contacto) y Cálculo quedan c
 - **§17.6 Resultados**: con tolerancias por defecto, Epitrocoidal/Hipotrocoidal/Trocoidal usan ~283–303 muestras (antes 1001) con error ≤ 0,3 µm; calcular la geometría tarda 2–3 ms. Tolerancias muy estrictas con límite bajo devuelven `limite_alcanzado` y `cumple = False`.
 - **§17.7 Limitaciones**: la malla uniforme con n par usa n+1; el muestreo adaptativo corre en NumPy aunque el backend sea GPU; no hay estimador de tiempo predictivo (a propósito); decimales no afectan los spin de entrada ni los exportados de datos; no se probó en Windows ni con GPU. Tips → Guía Técnica sigue pendiente.
 - **Tests**: `test_calculo_precision.py` (17). Suite completa: 88 pasaron, 2 omitidos (preexistentes); sin regresiones.
+
+
+---
+
+## 18. Lote 9 · Régimen dinámico / contacto (26-nov-2026, entrega 261120261)
+
+### §18.1 Estado previo (ya satisfecho antes de este lote, verificado en el código del repo)
+Régimen cinemático completo (F1, F6, F42), los 8 presets (F8), `RegistroLeyes` con rampas/seno/polinomio/puntos/spline (base de F15), encaje del Trocoidal en `0 ≤ x = prrp·θ ≤ L` con escalado/desplazamiento/recorte informado y pos/vel/acc consistentes (F39–F41, §10.5), reproducción por reloj real independiente de FPS (F59 en cinemática), formateo centralizado `utils/formato_numerico` (F62), muestreo uniforme/adaptativo de la geometría (F63, sin conectar a contactos), indicador de costo MEDIDO (F64, sin estimación), `SettingsState.simulacion.basada_en_contacto` solo guardado (F58), y el `.ui` del editor ya traía la pestaña dinámica sin conexiones (F3 visual). Los `.ui` de los sistemas no tenían `lblEstadoSolucionador`/`btnVerResultados`.
+
+### §18.2 Arquitectura añadida (sin capas extra; núcleo común + adaptadores)
+- `engine/contacto_fisico.py` — núcleo: `PerfilDentado` (separación con signo g, punto, normal y diente sobre la curva_offset REAL; zoom vectorizado) y `resolver_equilibrio` (unilateral sin fricción: penalización elástica por energía convexa + conjunto activo + Newton con búsqueda lineal; rígido por NNLS con prueba de unicidad).
+- `engine/mecanismos_fisicos.py` — adaptadores Epi/Hipo (Fijo: salida engranaje; Orbitar: salida brazo), Trocoidal (Fijo: cremallera; Trasladar: carro) y Planetario (sol–planetas y anular–planetas, GDL = salida + giro de cada planeta). Reutilizan `SolverCinematico` / `PlanetarioEngine.estado` sin tocarlos.
+- `engine/accionamiento.py` (Stepper/AC/Custom, capacidad), `engine/cargas.py` (T(t), T(θ), T(ω) con RegistroLeyes), `engine/estudio_fisico.py` (escenarios, ejecución por muestras, eventos, exportación).
+- `ui/estudio_qt.py` (`GestorEstudio`: QThread + cancelación cooperativa, estados, huella/invalidación, persistencia), `ui/regimen_dinamico.py` (pestaña dinámica del editor), `widgets/hud.py` (HUD + flechas de fuerza).
+- Convenciones: n del material del engranaje hacia el rodillo; F sobre el rodillo = +Fn·n; momentos +z; carga positiva = resistente (Q = −T); mm, N, N·mm (presentación en N·m). Par motor = conjugado de θ del perfil (en Trocoidal el piñón gira −θ: `signo_entrada = −1`).
+
+### §18.3 Cumplimiento de las 64 funciones
+Leyenda: ✅ Implementada/Probada · 🟡 Implementada con limitaciones · ⚪ Físicamente indeterminada por falta de datos (tratada explícitamente).
+
+| # | Función | Estado | Evidencia |
+|---|---|---|---|
+| 1 | Régimen cinemático íntegro | ✅ | sin cambios de comportamiento; suite previa (90) pasa |
+| 2 | Régimen dinámico/contacto operativo | ✅ | `ui/regimen_dinamico.py`; `test_cuatro_ventanas_dos_regimenes_y_estudio` |
+| 3 | Ambos regímenes en el editor | ✅ | `tabRegimenes` (2 pestañas) probado |
+| 4 | Accionamiento, Cargas, Contacto, Integración conectados | ✅ | `listSeccionesEstudio`↔`stackConfiguracion`; formulario ↔ `Escenario` |
+| 5 | Referencia temporal común, estados separados | ✅ | `linea_tiempo_para()` (misma LineaTiempo encajada); `ResultadoEstudio` aparte del estado cinemático |
+| 6 | Edición de leyes/tramos/reproducción/importar/exportar | ✅ | controlador cinemático intacto (se quitaron solo líneas duplicadas) |
+| 7 | Persistencia en el proyecto + compatibilidad | ✅ | clave opcional `estudio_dinamico` (JSON estricto, NaN→null); `test_persistencia_en_proyecto_y_compatibilidad` |
+| 8 | 8 presets conservados | ✅ | `FabricaPresets` sin cambios |
+| 9 | Escenario dinámico por preset | ✅ | `BibliotecaEscenarios.por_preset`; por defecto SIN carga (no se inventan pares) |
+| 10 | Recuperar escenario al seleccionar preset, respetando cambios sin guardar | ✅ | `_preset_cambiado` + diálogo Guardar/Descartar/Cancelar; `test_escenario_por_preset…` |
+| 11 | Duplicar/personalizar sin destruir originales | ✅ | «Nuevo escenario…» copia el formulario; presets intactos (probado) |
+| 12–14 | Editores T(t), T(θ), T(ω) | ✅ | `engine/cargas.py`; `test_t_de_t_theta_omega_en_el_estudio` |
+| 15 | Leyes reutilizadas, dominios, unidades, periodicidad | ✅ | RegistroLeyes; fuera de dominio = Indeterminado salvo periodo; `test_leyes_dominios_y_periodicidad` |
+| 16 | Prescrita / motor / calculada inequívocas | ✅ | leyendas [Prescrita] discontinua, [Motor] punteada, [Calculada] continua |
+| 17 | Combo Stepper / AC 4p-50 Hz / Custom | ✅ | `comboTipoMotor` con visibilidad por tipo |
+| 18 | Stepper: P, n, par de retención, curva | ✅ | retención solo en reposo; fuera: curva o Indeterminado (probado) |
+| 19 | AC: f, polos, P, curva/modelo; síncrona vs real | ✅ | n_s = 120f/p = 1500 rpm (probado); sin curva: modelo lineal de deslizamiento declarado, solo en [n_nom, n_s] |
+| 20 | Custom obligatorio: valores, curva o expresión validada | ✅ | `compilar_expresion` (AST restringido); vacío = error de validación (probado) |
+| 21 | Movimiento impuesto | ✅ | par motor requerido sobre la trayectoria prescrita |
+| 22 | Evaluación de capacidad sin alterar la trayectoria | ✅ | `evaluar_capacidad`; la trayectoria no se modifica |
+| 23 | Intervalos no viables con causa | ✅ | eventos «Intervalo no viable/indeterminado [t1, t2]» + causa (par > disponible, fuera de curva, sin datos); potencia nominal solo como advertencia |
+| 24 | Contactos rodillo–perfil trocoidal real | ✅ | `PerfilDentado` sobre `curva_offset`; |g| < 1e-9 mm en engrane ideal (4 mecanismos) |
+| 25 | Separación con signo | ✅ | `test_separacion_con_signo_contacto_y_penetracion` |
+| 26 | Normales y puntos de contacto | ✅ | normal unitaria ⟂ flanco (< 1e-6) probada |
+| 27 | Unilateral sin fuerza atractiva | ✅ | F ≥ 0; contacto del lado equivocado = 0; sin contacto capaz = «Sin equilibrio» |
+| 28 | Rigidez normal parametrizable (modelo elástico simplificado) | ✅ | penalización lineal F = k·max(0, δ); k = 0 → no se asume valor (análisis rígido) |
+| 29 | Amortiguamiento solo si es determinable | 🟡 | F = kδ + c·δ̇ con δ̇ de las velocidades relativas PRESCRITAS; nulo en reposo (probado). No modela transitorios (no hay inercias) |
+| 30 | Normal sin fricción; tangencial separado | ✅ | `chkIncluirFriccion` deshabilitado con explicación |
+| 31 | Reparto por equilibrio + compatibilidad + rigidez | ✅ | F_i ∝ J_i con k igual (12/16 N, no 50/50); holgura retrasa el contacto (analítico exacto) |
+| 32 | Componentes radial y tangencial | ✅ | `componentes_locales` (centro del engranaje; cremallera: Y/X) exportadas Fr/Ft |
+| 33 | Momentos por brazos y suma por contacto | ✅ | `momentos()` por componente; trabajo virtual verificado a 1e-8 en los 4 mecanismos |
+| 34 | Pérdida/recuperación de contacto y conjunto activo | ✅ | eventos por muestra |
+| 35 | Inversión de carga, cambio de flanco, backlash | ✅ | eventos + holgura geométrica (suma de separaciones por flanco / |J|) |
+| 36 | Análisis en Epi, Hipo, Trocoidal y Planetario (núcleo común) | ✅ | `test_contactos_reales_y_trabajo_virtual_en_los_cuatro` |
+| 37 | GDL, modos fijo/alterno y montajes existentes | ✅ | Fijo/Orbitar/Trasladar y combinaciones entrada/bloqueado del planetario |
+| 38 | Estado prescrito y resultados físicos independientes | ✅ | q = deflexiones elásticas; el estado cinemático nunca se sobrescribe |
+| 39 | Trocoidal 0 ≤ x ≤ L con x = prrp·θ | ✅ | `validar_muestra` + misma LineaTiempo encajada; `test_trocoidal_recorrido_0_a_L` |
+| 40 | Adaptar/rechazar presets, informar escalado/desplazamiento/recorte | ✅ | `ajustada` existente; el estudio guarda `meta.transformacion_perfil` |
+| 41 | Consistencia pos/vel/acc tras transformar | ✅ | probado (escalado y recorte) |
+| 42 | θ(t), ω(t), α(t) en el editor cinemático | ✅ | preexistente |
+| 43 | T(t), T(θ), T(ω) prescritas y calculadas (multivaluadas) | ✅ | curvas paramétricas, no se reducen a funciones unívocas |
+| 44 | Historial de fuerzas por contacto con selección | ✅ | selección en `tablaTabFuerzasContacto` |
+| 45 | Par motor, resistente, transmitido y por componente | ✅ | pestaña Momentos (cuando son determinables; si no, «Indeterminado») |
+| 46 | Gráficas/datos cinemático y contacto desacoplados | ✅ | gráficas y modelos separados |
+| 47 | Cursor temporal con estado geométrico | ✅ | línea móvil sincronizada → la ventana muestra la geometría y las flechas Fn en ese t (probado) |
+| 48 | HUD con velocidades de entrada/salida manteniendo FPS | ✅ | `widgets/hud.py` |
+| 49 | Unidades rpm, rad/s, °/s; mm/s en cremallera | ✅ | probado |
+| 50 | Relación instantánea con signo y velocidades nulas | ✅ | del MAPA cinemático d(sal)/d(ent) (definida con ω = 0); «∞»/«—» explícitos |
+| 51 | Submenú Opciones de la gráfica → Indicadores en pantalla | ✅ | `widgets/plot_menu.py` (FPS, velocidades, relación, unidades), persistente en QSettings |
+| 52 | Exportar CSV/JSON con puntos, direcciones y fuerzas individuales | ✅ | serie + `_contactos.csv` (formato largo) y JSON estricto; probado |
+| 53 | Equilibrio cuasiestático por muestras, unilateral | ✅ | `ejecutar_estudio` |
+| 54 | Tolerancias configurables y dimensionalmente adecuadas | ✅ | N para coordenadas de traslación, N·mm para giros; brecha en mm |
+| 55 | Diagnósticos: residuos, penetración, falta de datos, no convergencia | ✅ | pestaña Diagnóstico + mensajes por muestra; `test_no_convergencia_informada` |
+| 56 | Sin bloquear la UI (hilo elegido con criterio) | ✅ | QThread (ver docstring de `ui/estudio_qt.py`) |
+| 57 | Progreso, cancelación cooperativa, estados, recuperación | ✅ | `test_cancelacion_y_recuperacion` |
+| 58 | Activación desde Ajustes (`basada_en_contacto`) | ✅ | apagado: no se ejecuta ni se dibujan fuerzas; `test_activacion_desde_ajustes` |
+| 59 | Muestreo/cálculo independientes de los FPS | ✅ | muestras de la LineaTiempo; HUD lee `LineaTiempo.vel` (probado) |
+| 60 | Compatibilidad: proyectos, sesión, autoguardado, temas, caché, manual, exportaciones | ✅ | sección opcional; suite previa completa pasa |
+| 61 | Pruebas unitarias, Qt y físicas | ✅ | `test_contacto_fisico.py` (24) + `test_regimen_qt.py` (8) |
+| 62 | Precisión de presentación centralizada | ✅ | tablas/etiquetas con `fmt`; exportaciones con precisión completa |
+| 63 | Muestreo uniforme/adaptativo conectado, extremos y eventos | ✅ | «Usar estrategia de Ajustes» / uniforme / adaptativa: siempre incluye extremos e inversiones; la adaptativa refina cambios de conjunto activo o de estado (probado) |
+| 64 | Costo: estimación calibrada vs duración medida | ✅ | «Estimar costo» mide 3 muestras reales y extrapola (etiquetado ESTIMACIÓN); al terminar, «s medidos» |
+
+Ventanas principales: `lblEstadoSolucionador` (Sin estudio · Calculando · Finalizado · Cancelado · Error · Desactualizado) y `btnVerResultados` añadidos en los 3 `.ui` (Designer) y regenerados; el botón de línea de tiempo abre el editor de regímenes; la ejecución sigue SOLO en el editor. Finalizado solo tras una ejecución válida; cambiar geometría, perfil, modo, discretización o física lo pasa a Desactualizado (y vuelve a Finalizado si se restaura la misma configuración). `§14`: «Simulación basada en contacto» deja de ser solo guardada.
+
+### §18.4 Limitaciones físicas verificadas (no se inventan datos)
+- Sin masas ni inercias en el proyecto: no hay impactos, vibraciones, aceleraciones libres ni dinámica transitoria; el amortiguamiento solo usa velocidades prescritas.
+- Rigidez normal = dato de entrada (0 por defecto). Sin ella, con varios contactos el reparto es INDETERMINADO (hiperestático o precarga entre flancos opuestos con geometría ideal sin holgura). En ese caso el par motor sí se informa por TRABAJO VIRTUAL (válido sin fricción ni inercia; verificado a 1e-8), etiquetado como tal.
+- La geometría actual es ideal (holgura ≈ 1e-16 rad): el backlash se calcula pero será nulo hasta que exista geometría con holgura/tolerancias.
+- Motor: acople directo supuesto (no hay reductor ni variador en el modelo); un AC sin curva solo se evalúa en su zona lineal de deslizamiento; fuera de los datos = Indeterminado.
+- Rigidez única por contacto (no por material/radio de curvatura, Hertz pendiente); sin fricción.
+- Reparto rígido multi-GDL: la unicidad se demuestra para nulidad ≤ 1; si no, se informa Indeterminado (conservador).
+- No probado: Windows real, GPU, diálogos nativos.
+
+
+---
+
+## 19. Lote 10 · La dinámica gobierna a la cinemática (26-nov-2026, entrega 261120262)
+
+Pedidos del usuario (8) y su estado:
+
+| # | Pedido | Estado | Evidencia / detalle |
+|---|---|---|---|
+| 1 | OpenGL no funcionaba | ✅ Corregido | Causa: `_PLOTS` (WeakSet) conservaba envoltorios de gráficas ya destruidas (el editor se borra al cerrarse) y `useOpenGL` lanzaba `RuntimeError: Internal C++ object already deleted`, que hacía fallar TODO el cambio. `pg_helpers.plots_vivos()` las filtra (shiboken6.isValid); si de verdad falla un driver se revierte a software en todas y el diálogo informa el motivo (`ULTIMO_ERROR_OPENGL`). Test `test_opengl_ignora_graficas_destruidas`. No verificado con GPU real. |
+| 2 | ω en modo manual | ✅ | Derivada del control respecto al RELOJ REAL (ventana 0,25 s; 0 tras 0,3 s quieto; refresco 150 ms), marcada en el HUD como estimada. Alimenta también T(ω). Test `test_modo_manual_omega_y_fuerzas_en_vivo` |
+| 3 | Gráfica de la línea de tiempo sin colores del tema | ✅ | Curvas (posición = Piñón de rodillos, velocidad = Curva base, aceleración = Perfil/engranaje), marcas y la rueda (antes blanca fija) toman los colores técnicos; `ThemeManager.apply_to_plot` llama al gancho `plot._retemar`. Mismo criterio en las gráficas del estudio. Test `test_editor_sigue_el_tema` |
+| 4 | Sin comunicación del modo contacto con la ventana principal | ✅ | Etiqueta «Simulación por contacto ACTIVA · estado», HUD con par motor/Fn máx./estado del motor, flechas de fuerza, deformación amplificable (×1–×1000, menú Indicadores) en Automático y en Manual (equilibrio en vivo con el escenario que muestra el editor) |
+| 5 | Optimización general y valores por defecto | ✅ | `ContactEngine._localizar_contacto` vectorizado (bit a bit idéntico a la referencia, conservada como `_localizar_contacto_referencia`; test): Planetario 11 → 5 ms/fotograma, Epi 1,5 → 1,1 ms. Muestras base del flanco en caché. Integración: tablas periódicas, carga y curva del motor precompiladas, cinemática lineal cacheada (21 s → ~5 s para 40 000 pasos). Valores por defecto verificados: FPS automático, render Software, CPU, muestreo adaptativo, caché activa (ver guía §7) |
+| 6 | El régimen dinámico gobierna al cinemático | ✅ | `engine/dinamica_contacto.py`: integración temporal Newmark implícito (γ 0,6, β 0,3025) + Newton; la salida (y cada planeta) se mueve solo por las fuerzas de contacto; inercias como datos (0 = sin masa = equilibrio instantáneo). Con «Evaluación de capacidad» el motor pierde sincronismo si no le alcanza el par y se re-engancha. ▶ sin estudio vigente lo calcula y reproduce al terminar; la animación usa θ integrado + deflexión. Método por defecto: «Integración temporal (dinámica de contacto)» |
+| 7 | Revisar la conversación de ChatGPT | ⚪ No accesible | La página compartida carga con JavaScript y desde aquí solo se obtuvo el título («Recordar aplicación»). Pegar el texto o exportarlo para revisarlo |
+| 8 | Guía técnica en PDF | ✅ | `docs/Guia_tecnica_RPS_Design_V2.pdf` (17 págs., 13 capturas reales, índice con marcadores): manual por ventana, fundamentos (geometría, detector, cuasiestático, dinámica), convenciones, flujo recomendado, solución de problemas, limitaciones. Info → Guía técnica la abre (`utils/guia.py`). Fuentes y capturas regenerables en `docs/fuentes_guia/` |
+
+### §19.1 Modelo dinámico
+- Coordenadas: θ (entrada; prescrita mientras el motor la sostiene) y q (deflexión de la salida y del giro de cada planeta respecto a la cinemática del θ REAL). T = ½I_eθ̇² + ½ΣI_c(R_cθ̇ + q̇_c)²; contactos δ = −g(θ) + J·q, F = max(0, kδ + cδ̇); M·ẍ + Gᵀ·F = Q (+ par motor en θ).
+- Validación: límite sin inercias = cuasiestático (T_m = T·rel, mediana exacta, <1 % al entrar un rodillo por el amortiguamiento); par inercial T_m = I_s·rel²·θ̈ (<3 %); 4 mecanismos sin saltos de diente (q < 0,01); pérdida de sincronismo con motor débil (θ real ≠ θ prescrito). `tests/test_contacto_fisico.py::Dinamica`.
+- Bug encontrado al integrar (también afectaba al cuasiestático): en la arista de la cresta el signo de la separación salía invertido para un rodillo tocando la punta (g ≈ −2r). Ahora el centro está fuera si queda del lado libre de cualquiera de los dos flancos.
+- Requisitos: penalización elástica con rigidez > 0 (no hay modelo de impactos rígidos). Sin ella, ▶ avisa y reproduce la cinemática.
+- Limitaciones nuevas: carga dependiente del estado evaluada con un paso de retraso; servo ideal limitado por la curva (sin modelo eléctrico); la tabla periódica de la cremallera no modela sus extremos; la vibración de contacto solo se resuelve si el paso es < 1/10 del periodo (`meta.resuelve_vibracion_contacto`).
+
+### §19.2 Archivos
+Nuevos: `engine/dinamica_contacto.py`, `utils/guia.py`, `docs/Guia_tecnica_RPS_Design_V2.pdf`, `docs/fuentes_guia/` (generador, capturas). Modificados: `engine/contact_engine.py`, `engine/contacto_fisico.py`, `engine/mecanismos_fisicos.py`, `engine/estudio_fisico.py`, `engine/accionamiento.py`, `engine/cargas.py`, `ui/sistema_base.py`, `ui/planetary_window.py`, `ui/estudio_qt.py`, `ui/regimen_dinamico.py`, `ui/velocity_profile_window.py`, `ui/theme_manager.py`, `ui/settings_window.py`, `widgets/hud.py`, `widgets/plot_menu.py`, `widgets/pg_helpers.py`, `widgets/wheel_widget.py`, pruebas.
+- **Tests**: 134 (31 de física/dinámica/optimización, 13 Qt del régimen, resto previos). Sin regresiones. Arranque de la app verificado (offscreen).

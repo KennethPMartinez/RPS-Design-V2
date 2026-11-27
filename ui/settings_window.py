@@ -354,16 +354,17 @@ class SettingsWindow(QtCore.QObject):
         ajustes.desviacion.desviacion_angular_grados=state.calculo.desviacion_angular_grados
         usar_gl=state.simulacion.render=='OpenGL'
         if usar_gl!=ajustes.render_opengl:
-            from widgets.pg_helpers import aplicar_opengl
-            if not aplicar_opengl(usar_gl,self.dialog):
-                raise RuntimeError('No se pudo aplicar OpenGL; se conserva la preferencia anterior')
+            from widgets import pg_helpers
+            if not pg_helpers.aplicar_opengl(usar_gl,self.dialog):
+                motivo=pg_helpers.ULTIMO_ERROR_OPENGL or 'motivo no informado por el controlador'
+                raise RuntimeError(f'No se pudo aplicar OpenGL ({motivo}); se conserva la preferencia anterior')
             ajustes.render_opengl=usar_gl
         # Compatibilidad con ventanas antiguas, en tanto se migren sus estilos.
         bg=state.apariencia.ui_colores.get('Fondo de ventana','#222222')
         color=QtGui.QColor(bg)
         ajustes.modo_oscuro=color.lightness()<128
         self._theme.apply(state.apariencia)
-        # No activar control físico ni fingir soporte de simulación por contacto.
+        # Sin control físico. `basada_en_contacto` habilita los estudios de contacto (ui/estudio_qt.contacto_habilitado).
 
     def _accept(self):
         if self._apply():self.dialog.accept()

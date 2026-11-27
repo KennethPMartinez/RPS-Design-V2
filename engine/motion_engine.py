@@ -21,8 +21,6 @@ Perfildevelocidad_simulador_Window, para mapear directo UI <-> modelo <-> JSON.
 from __future__ import annotations
 
 import copy
-import copy
-import copy
 import math
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -424,8 +422,6 @@ class LineaTiempo:
         return (LineaTiempo(self.t, f * self.entrada, f * self.pos + off, f * self.vel, f * self.acc,
                             list(self.errores)), f, off, False)
 
-    # --- encaje de la posición en un rango permitido (p. ej. largo de la cremallera) ---
-    # --- encaje de la posición en un rango permitido (p. ej. largo de la cremallera) ---
     def posicion_en(self, t: float) -> float:
         """Escalar por fotograma (reproducción interactiva)."""
         return float(np.interp(t, self.t, self.pos))

@@ -32,10 +32,10 @@ def configurar_pyqtgraph(usar_opengl: bool = False, oscuro: bool = True) -> None
 
 
 def configurar_menu_plot(plot: pg.PlotWidget, titulo: str, geometrica: bool = False,
-                         transformadas: bool = False) -> pg.PlotWidget:
+                         transformadas: bool = False, indicadores: bool = False) -> pg.PlotWidget:
     """Instala el menú contextual en español (`plot._menu`). `transformadas=True` añade el submenú
     Transformadas (solo la línea de tiempo). `geometrica` se conserva por compatibilidad."""
-    plot._menu = MenuGrafica(plot, titulo, transformadas)
+    plot._menu = MenuGrafica(plot, titulo, transformadas, indicadores)
     _PLOTS.add(plot)
     try:        # tema de Ajustes también para gráficas creadas después del arranque
         from ui.ajustes_runtime import runtime
@@ -52,10 +52,40 @@ def desactivar_clic_leyenda(legend) -> None:
         muestra.mouseClickEvent = lambda ev: None
 
 
+def color_tecnico(rol: str, defecto: str = "#4EA0F0"):
+    """Color técnico del tema vigente (Ajustes → Apariencia) como tupla RGB."""
+    try:
+        from ui.ajustes_runtime import runtime
+        css = runtime.estado.apariencia.tecnicos_colores.get(rol, defecto)
+    except Exception:
+        css = defecto
+    c = QtGui.QColor(css)
+    if not c.isValid():
+        c = QtGui.QColor(defecto)
+    return (c.red(), c.green(), c.blue())
+
+
+def plots_vivos() -> list:
+    """PlotWidget registrados cuyo objeto C++ sigue existiendo. El WeakSet puede conservar envoltorios de
+    gráficas de ventanas ya destruidas (p. ej. el editor, WA_DeleteOnClose): tocarlos lanza RuntimeError."""
+    try:
+        import shiboken6
+        vivo = shiboken6.isValid
+    except Exception:          # pragma: no cover
+        vivo = lambda _o: True
+    out = []
+    for p in list(_PLOTS):
+        if vivo(p):
+            out.append(p)
+        else:
+            _PLOTS.discard(p)
+    return out
+
+
 def retemar_plots(oscuro: bool) -> None:
     c = COLORES_TEMA[oscuro]
     pg.setConfigOptions(background=c["bg"], foreground=c["fg"])
-    for p in list(_PLOTS):
+    for p in plots_vivos():
         try:
             p.setBackground(c["bg"])
             pi = p.getPlotItem()
@@ -68,16 +98,22 @@ def retemar_plots(oscuro: bool) -> None:
             pass
 
 
+ULTIMO_ERROR_OPENGL = ""
+
+
 def aplicar_opengl(activo: bool, parent=None) -> bool:
     """Cambia el viewport de TODAS las gráficas abiertas a/desde OpenGL sin reiniciar, con
     barra de progreso. Los plots que se creen después heredan la opción global."""
+    global ULTIMO_ERROR_OPENGL
+    ULTIMO_ERROR_OPENGL = ""
     if activo:      # sin contexto OpenGL válido el viewport queda en blanco: no se cambia nada
         ctx = QtGui.QOpenGLContext()
         if not ctx.create():
+            ULTIMO_ERROR_OPENGL = "el controlador de video no entregó un contexto OpenGL (actualice el driver)"
             print("[pg_helpers] OpenGL no disponible en este equipo; se mantiene el render por software.")
             return False
     pg.setConfigOptions(useOpenGL=activo)
-    plots = [p for p in list(_PLOTS)]
+    plots = plots_vivos()
     dlg = QtWidgets.QProgressDialog("Cambiando el render de las gráficas…", None, 0, max(1, len(plots)), parent)
     dlg.setWindowTitle("OpenGL" if activo else "Render por software")
     dlg.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
@@ -90,11 +126,21 @@ def aplicar_opengl(activo: bool, parent=None) -> bool:
         try:
             p.useOpenGL(activo)
             p.getPlotItem().update()
+        except RuntimeError as e:   # gráfica destruida entre la lista y el cambio: se ignora
+            print(f"[pg_helpers] gráfica ya destruida, se omite: {e}")
         except Exception as e:      # driver sin soporte, etc.
             print(f"[pg_helpers] useOpenGL({activo}) falló: {e}")
+            ULTIMO_ERROR_OPENGL = f"{type(e).__name__}: {e}"
             ok = False
     dlg.setValue(max(1, len(plots)))
     dlg.close()
+    if not ok and activo:           # no dejar unas gráficas en OpenGL y otras no
+        pg.setConfigOptions(useOpenGL=False)
+        for p in plots_vivos():
+            try:
+                p.useOpenGL(False)
+            except Exception:
+                pass
     return ok
 
 

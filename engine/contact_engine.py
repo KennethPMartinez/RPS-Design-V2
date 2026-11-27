@@ -245,7 +245,69 @@ class ContactEngine:
         dientes_j = np.floor((phi_wrapped + EPS_FRONTERA) / paso_diente).astype(int) % Zg
         return indices, dientes_j, cx_cand, cy_cand
 
+    def _base_muestras(self, n_muestras: int):
+        """Muestras del flanco base (θ ∈ ±θ_lim) ya con la rotación de vista: dependen solo de la geometría,
+        así que se calculan UNA vez por engine (antes, en cada fotograma)."""
+        cache = getattr(self, "_cache_base", None)
+        if cache is None or cache[0] != n_muestras:
+            rot_vista = np.radians(self.motor.ROTACION_VISTA_SIMULACION_GRADOS)
+            th = np.linspace(-self.motor.theta_lim, self.motor.theta_lim, n_muestras)
+            ox, oy = mu.rotar(*self.motor.curva_offset(th), rot_vista)
+            self._cache_base = cache = (n_muestras, th, np.asarray(ox, float), np.asarray(oy, float))
+        return cache[1:]
+
     def _localizar_contacto(self, indices, dientes_j, cx_cand, cy_cand, n_muestras=61):
+        """PASO 3 vectorizado (lote 10): MISMO algoritmo que `_localizar_contacto_referencia` (3 dientes
+        candidatos, argmin sobre 61 muestras y 5 pasadas de ZOOM de 21 puntos sobre la curva exacta), pero
+        resuelto para todos los rodillos a la vez con NumPy. Ver la versión de referencia para la derivación."""
+        n = len(indices)
+        if n == 0:
+            e = np.empty(0)
+            return e, e, e, e, e, e, np.empty(0, int)
+        rot_vista = np.radians(self.motor.ROTACION_VISTA_SIMULACION_GRADOS)
+        theta_muestras, ox_base, oy_base = self._base_muestras(n_muestras)
+        Zg = self.contexto.numero_dientes
+        paso_diente = self.contexto.paso_angular_diente
+        cx = np.asarray(cx_cand, float)
+        cy = np.asarray(cy_cand, float)
+        js = (np.asarray(dientes_j, int)[:, None] + np.array([-1, 0, 1])[None, :]) % Zg      # (n, 3)
+        beta = js * paso_diente
+        cb, sb = np.cos(beta)[..., None], np.sin(beta)[..., None]
+        oxj = cb * ox_base - sb * oy_base                                                   # (n, 3, m)
+        oyj = sb * ox_base + cb * oy_base
+        d2 = (oxj - cx[:, None, None]) ** 2 + (oyj - cy[:, None, None]) ** 2
+        imin = np.argmin(d2, axis=2)                                                        # (n, 3)
+        dmin = np.take_along_axis(d2, imin[..., None], axis=2)[..., 0]
+        kd = np.argmin(dmin, axis=1)                                                        # primer mínimo (= `<`)
+        fila = np.arange(n)
+        mejor_j = js[fila, kd]
+        mejor_theta = theta_muestras[imin[fila, kd]]
+        paso_malla = float(theta_muestras[1] - theta_muestras[0])
+        lo = np.maximum(mejor_theta - paso_malla, float(theta_muestras[0]))
+        hi = np.minimum(mejor_theta + paso_malla, float(theta_muestras[-1]))
+        cj, sj = np.cos(mejor_j * paso_diente)[:, None], np.sin(mejor_j * paso_diente)[:, None]
+        cv, sv = np.cos(rot_vista), np.sin(rot_vista)
+        for _ in range(5):
+            ts = np.linspace(lo, hi, 21, axis=-1)        # misma aritmética que linspace escalar (bit a bit)
+            oxz, oyz = self.motor.curva_offset(ts)
+            oxz, oyz = cv * oxz - sv * oyz, sv * oxz + cv * oyz
+            oxz, oyz = cj * oxz - sj * oyz, sj * oxz + cj * oyz
+            kz = np.argmin((oxz - cx[:, None]) ** 2 + (oyz - cy[:, None]) ** 2, axis=1)
+            mejor_px, mejor_py, mejor_theta = oxz[fila, kz], oyz[fila, kz], ts[fila, kz]
+            lo = ts[fila, np.maximum(kz - 1, 0)]
+            hi = ts[fila, np.minimum(kz + 1, 20)]
+        radio_rodillo = self.rodillo.radio_rodillo
+        dx, dy = cx - mejor_px, cy - mejor_py
+        norma = np.hypot(dx, dy)
+        ok = norma > 1e-15
+        nn = np.where(ok, norma, 1.0)
+        gx = np.where(ok, mejor_px + radio_rodillo * dx / nn, cx)
+        gy = np.where(ok, mejor_py + radio_rodillo * dy / nn, cy)
+        angulos = self.motor.angulo_presion(mejor_theta)
+        return (mejor_px.astype(float), mejor_py.astype(float), gx, gy, mejor_theta.astype(float), angulos,
+                mejor_j.astype(int))
+
+    def _localizar_contacto_referencia(self, indices, dientes_j, cx_cand, cy_cand, n_muestras=61):
         """PASO 3: para cada rodillo activo, busca el punto del flanco REAL
         más cercano a su centro candidato -- condición de no-penetración
         aplicada indirectamente vía búsqueda discreta (argmin).

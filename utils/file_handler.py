@@ -31,19 +31,22 @@ class ArchivoInvalido(ValueError):
 
 
 def serializar(sistema: str, parametros, sim: dict, perfil_mov: Optional[PerfilMovimiento],
-               visibilidad: AjustesVisibilidadSimulacion) -> dict:
-    return {
+               visibilidad: AjustesVisibilidadSimulacion, estudio: Optional[dict] = None) -> dict:
+    d = {
         "formato": FORMATO, "version": VERSION, "sistema": sistema,
         "parametros": asdict(parametros),
         "simulacion": sim,   # {"modo", "modo_pinon", "valor_manual" (θ° o X mm), "predeterminado"}
         "perfil_movimiento": perfil_mov.to_dict() if perfil_mov else None,
         "visibilidad": asdict(visibilidad),
     }
+    if estudio is not None:  # régimen de contacto (escenarios + resultado); opcional: los proyectos viejos no lo tienen
+        d["estudio_dinamico"] = estudio
+    return d
 
 
 def guardar_proyecto(ruta, sistema: str, parametros, sim: dict, perfil_mov: Optional[PerfilMovimiento],
-                     visibilidad: AjustesVisibilidadSimulacion) -> None:
-    carga = serializar(sistema, parametros, sim, perfil_mov, visibilidad)
+                     visibilidad: AjustesVisibilidadSimulacion, estudio: Optional[dict] = None) -> None:
+    carga = serializar(sistema, parametros, sim, perfil_mov, visibilidad, estudio)
     Path(ruta).write_text(json.dumps(carga, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
@@ -68,4 +71,5 @@ def abrir_proyecto(ruta, sistema: str) -> dict:
     pm = d.get("perfil_movimiento")
     return {"parametros": params, "simulacion": d.get("simulacion", {}),
             "perfil_movimiento": PerfilMovimiento.from_dict(pm) if pm else None,
-            "visibilidad": vis}
+            "visibilidad": vis,
+            "estudio": d.get("estudio_dinamico") if isinstance(d.get("estudio_dinamico"), dict) else None}

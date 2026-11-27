@@ -21,6 +21,7 @@ import pyqtgraph as pg
 from PySide6 import QtCore, QtGui, QtWidgets
 
 from config.data_structures import AjustesVisibilidadSimulacion
+from widgets.hud import HUDMixin
 from widgets.pg_helpers import configurar_menu_plot
 
 C_PATRON = (77, 140, 242)
@@ -46,7 +47,7 @@ def _rot(x, y, ang):
     return c * x - s * y, s * x + c * y
 
 
-class SimulationView(pg.PlotWidget):
+class SimulationView(HUDMixin, pg.PlotWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setAspectLocked(True)
@@ -54,7 +55,7 @@ class SimulationView(pg.PlotWidget):
         self.setLabel("bottom", "X", units="mm")
         self.setLabel("left", "Y", units="mm")
         self.getViewBox().disableAutoRange()
-        configurar_menu_plot(self, "simulacion", geometrica=True)
+        configurar_menu_plot(self, "simulacion", geometrica=True, indicadores=True)
         self._ver_todo = self.resetear_camara          # proveedor de encuadre para "Ver todo"
 
         mk = pg.mkPen
@@ -87,6 +88,7 @@ class SimulationView(pg.PlotWidget):
         self.lbl_fps.move(8, 8)
         self.lbl_fps.setText("-- FPS")
         self.lbl_fps.adjustSize()
+        self._init_hud()                 # FPS + velocidades + relación (widgets/hud.py) y capa de fuerzas
 
     # ------------------------------------------------------------------
     def set_geometria(self, res) -> None:
@@ -246,8 +248,7 @@ class SimulationView(pg.PlotWidget):
         ahora = time.perf_counter()
         if ahora - self._t_fps >= 0.5:
             fps = self._n_fps / (ahora - self._t_fps)
-            self.lbl_fps.setText(f"{fps:5.1f} FPS ({1000.0 / max(fps, 1e-6):5.1f} ms)")
-            self.lbl_fps.adjustSize()
+            self._hud_fps(f"{fps:5.1f} FPS ({1000.0 / max(fps, 1e-6):5.1f} ms)")
             self._n_fps, self._t_fps = 0, ahora
 
     def fotograma(self) -> QtGui.QImage:

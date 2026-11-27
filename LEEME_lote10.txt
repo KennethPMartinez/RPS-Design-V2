@@ -1,0 +1,12 @@
+LOTE 10 - La dinámica de contacto gobierna la animación (26-nov-2026) · entrega 261120262
+Copiar el contenido del zip sobre la carpeta del proyecto respetando las carpetas (sobrescribir).
+Este zip es ACUMULATIVO: incluye también todo lo del lote 9 (261120261), así que sirve aunque no se haya
+pegado el anterior. No hay que borrar nada (tests/test_motor_plan.py, pendiente del lote 5, puede borrarse).
+
+Después:  python -m pytest tests --ignore=tests/RPS_Ajustes_Claude --ignore=tests/test_motor_plan.py
+          python main.py
+Para la simulación gobernada por contacto:
+  Ajustes → Simulación → «Habilitar análisis basado en contacto»;
+  editor de regímenes → Contacto: «Penalización elástica unilateral» + rigidez normal > 0 (dato propio);
+  opcional: inercias en Accionamiento / Cargas. Luego ▶ en Automático calcula y reproduce.
+Guía: Info → Guía técnica (docs/Guia_tecnica_RPS_Design_V2.pdf). Detalle completo en progress.md §19.

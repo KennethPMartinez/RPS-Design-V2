@@ -45,6 +45,8 @@ from ui.ajustes_runtime import runtime
 from utils import costo_calculo, formato_numerico
 from utils.formato_numerico import fmt
 from ui.velocity_profile_window import VentanaPerfilVelocidad
+from ui import estudio_qt
+from ui.estudio_qt import GestorEstudio
 from utils import file_handler
 from widgets.pg_helpers import reemplazar_widget
 from widgets.simulation_view import SimulationView
@@ -88,6 +90,7 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
         self.ui.setupUi(self)
         self._preparar_ui()
         self.sim = self._crear_vista()
+        self.sim.on_hud_cambiado = lambda: self._emitir_estado()
         self.control = self._crear_control()
 
         self._debounce = QtCore.QTimer(self, singleShot=True, interval=150)
@@ -108,6 +111,16 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
         self._lbl_costo = QtWidgets.QLabel()                   # «Mostrar estimación de costo» (barra de estado)
         self._lbl_costo.setVisible(False)
         self.statusBar().addPermanentWidget(self._lbl_costo)
+        self.gestor_estudio = GestorEstudio(self)          # régimen de contacto (estado, hilo, resultados)
+        self.gestor_estudio.estadoCambiado.connect(self._estado_estudio)
+        self.gestor_estudio.inspeccion.connect(self._inspeccionar_estudio)
+        self.gestor_estudio.resultadoListo.connect(self._estudio_listo)
+        self._reproducir_tras_estudio = False
+        from collections import deque
+        self._hist_manual = deque(maxlen=64)                # (t real, θ°) del control manual -> ω estimada
+        self._t_hud = QtCore.QTimer(self)                   # decaimiento de ω manual cuando se suelta el control
+        self._t_hud.setInterval(150)
+        self._t_hud.timeout.connect(self._refresco_manual)
         self._conectar()
         self._aplicar_modo()
         self._recalcular()
@@ -179,7 +192,7 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
         u = self.ui
         for sp in self._spins():
             sp.valueChanged.connect(lambda *_: self._debounce.start())
-        self.control.cambiado.connect(lambda *_: self._emitir_estado())
+        self.control.cambiado.connect(self._control_cambiado)
         self._conectar_modo_pinon()
         u.comboBox_modo_sim.currentIndexChanged.connect(lambda *_: self._aplicar_modo())
         u.pushButton_mostrar_ocultar.clicked.connect(lambda *_: self._abrir_visibilidad())
@@ -189,14 +202,16 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
         u.pushButton_restart.clicked.connect(lambda *_: self._reiniciar())
         u.pushButton_record.clicked.connect(lambda *_: self._grabar())
         u.Editarlineadetiempo_button.clicked.connect(lambda *_: self._editar_linea_tiempo())
+        if hasattr(u, "btnVerResultados"):
+            u.btnVerResultados.clicked.connect(lambda *_: self._ver_resultados_estudio())
         u.checkBox_valpredeterminados.toggled.connect(self._predeterminado_cambiado)
         u.actionAbrir.triggered.connect(lambda *_: self._abrir())
         u.actionGuardar.triggered.connect(lambda *_: self._guardar())
         u.actionExportar.triggered.connect(lambda *_: self._exportar())
         u.actionConfiguraci_n.triggered.connect(lambda *_: runtime.abrir_dialogo(self))
         u.actionCerrar.triggered.connect(lambda *_: self.volver_al_menu())
-        u.actionGu_a_T_cnica.triggered.connect(lambda *_: QtWidgets.QMessageBox.information(
-            self, "Guía técnica", "La guía técnica se desarrollará más adelante."))
+        from utils.guia import abrir_guia
+        u.actionGu_a_T_cnica.triggered.connect(lambda *_: abrir_guia(self))
         u.actionResumen_de_Dise_o.triggered.connect(lambda *_: self._resumen())
         self._conectar_propiedades()
 
@@ -293,21 +308,105 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
         self._emitir_estado()
         if self._es_auto() and self._rango_angulo_auto() is not None:    # L / prrp cambiaron: reencajar
             self._reconstruir_auto()
+        self.gestor_estudio.verificar()
 
     # ------------------------------------------------------------------ estado de la simulación
     def _modo_pinon_cambiado(self):
         if self._dlg_vis is not None:
             self._dlg_vis.actualizar_modo(self.ui.comboBox_modo_pinon.currentIndex() == 1)
+        self.gestor_estudio.verificar()
         self._emitir_estado()
 
     def _es_auto(self) -> bool:
         return self.ui.comboBox_modo_sim.currentIndex() == 1
 
+    def _resultado_gobierna(self):
+        """Resultado físico que GOBIERNA la animación (contacto activo en Ajustes + estudio vigente), o None."""
+        g = self.gestor_estudio
+        if self._es_auto() and estudio_qt.contacto_habilitado() and g.valido() and g.resultado.t:
+            return g.resultado
+        return None
+
     def _angulo_motor(self) -> float:
-        """Ángulo del piñón (°) según el modo: línea de tiempo o control manual."""
+        """Ángulo del piñón (°): dinámica (si gobierna), línea de tiempo o control manual."""
+        r = self._resultado_gobierna()
+        if r is not None:                       # θ REAL integrado (puede retrasarse si el motor satura)
+            return float(np.interp(self._t, r.t, r.theta_in))
         if self._es_auto() and self.linea_tiempo is not None:
             return self.linea_tiempo.posicion_en(self._t)
         return self._angulo_desde_valor(self.control.acumulado)
+
+    # -- ω en modo manual: derivada del control respecto al RELOJ REAL (no de los FPS de render) ------------
+    def _control_cambiado(self, *_):
+        self._hist_manual.append((time.perf_counter(), self._angulo_desde_valor(self.control.acumulado)))
+        if not self._t_hud.isActive():
+            self._t_hud.start()
+        self._emitir_estado()
+
+    def _omega_manual(self) -> float:
+        """°/s del control manual: pendiente entre el registro más antiguo de los últimos 0,25 s y el último.
+        Vuelve a 0 si el control lleva más de 0,3 s quieto."""
+        h = self._hist_manual
+        if len(h) < 2 or time.perf_counter() - h[-1][0] > 0.3:
+            return 0.0
+        t1, a1 = h[-1]
+        t0, a0 = next((t, a) for t, a in h if t1 - t <= 0.25)
+        return (a1 - a0) / (t1 - t0) if t1 > t0 else 0.0
+
+    def _refresco_manual(self):
+        if self._es_auto() or not self._hist_manual or time.perf_counter() - self._hist_manual[-1][0] > 1.0:
+            self._t_hud.stop()
+        self._emitir_estado()
+
+    # -- estado físico mostrado sobre la geometría ------------------------------------------------------------
+    def _estado_fisico(self, ang: float):
+        """dict(q, fuerzas, texto, w_in, Tm) del régimen de contacto en el instante mostrado, o None."""
+        if not estudio_qt.contacto_habilitado():
+            return None
+        r = self._resultado_gobierna()
+        if r is not None:
+            i = r.indice_en(self._t)
+            q = None
+            if r.q and len(r.q[0]):
+                Q = np.asarray(r.q, float)
+                q = np.array([np.interp(self._t, r.t, Q[:, j]) for j in range(Q.shape[1])])
+            cs = [c for c in r.contactos[i] if c["Fn"] == c["Fn"] and c["Fn"] > 0]
+            modo = "dinámica" if r.meta.get("modo") == "dinamico" else "cuasiestático"
+            reg = r.regimen_motor[i] if r.regimen_motor and r.regimen_motor[i] else ""
+            txt = (f"Contacto ({modo}) t = {fmt(r.t[i], 's')}: par motor = {fmt(r.par_motor[i], 'N·m')}"
+                   + (f" · Fn máx = {fmt(max(c['Fn'] for c in cs), 'N')}" if cs else f" · {r.estado[i]}")
+                   + (f" · motor {reg.lower()}" if reg else ""))
+            return dict(q=q, cs=cs, texto=txt, w_in=float(np.interp(self._t, r.t, r.omega_in)))
+        if self._es_auto():
+            g = self.gestor_estudio
+            return dict(q=None, cs=[], w_in=None,
+                        texto="Contacto activo: " + ("calculando la dinámica…" if g.calculando() else
+                                                     "sin estudio vigente (▶ lo calcula)"))
+        w = self._omega_manual()
+        try:
+            d = self.gestor_estudio.estado_instantaneo(ang, w)
+        except Exception as e:
+            return dict(q=None, cs=[], w_in=w, texto=f"Contacto: {e}")
+        d["w_in"] = w
+        return d
+
+    def _aplicar_desviacion(self, est, q, factor: float):
+        """Dibuja la posición REAL de la salida: cinemática + deflexión (amplificada solo para visualizar)."""
+        import copy as _c
+        e = _c.copy(est)
+        d = float(q[0]) * factor
+        if self.LINEAL:
+            if e.patron_fijo:
+                e.centro_pinon = (e.centro_pinon[0] + d, e.centro_pinon[1])
+            else:
+                e.traslacion_patron = (e.traslacion_patron[0] + d, e.traslacion_patron[1])
+        elif e.patron_fijo:                       # Orbitar: la salida es el brazo -> el centro del piñón gira
+            c, s_ = np.cos(d), np.sin(d)
+            x, y = e.centro_pinon
+            e.centro_pinon = (c * x - s_ * y, s_ * x + c * y)
+        else:
+            e.angulo_patron_rad = e.angulo_patron_rad + d
+        return e
 
     def _estado_para(self, angulo_grados: float):
         alt = self.ui.comboBox_modo_pinon.currentIndex() == 1
@@ -330,7 +429,12 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
         try:
             ang = self._angulo_motor()
             self._refrescar_indicadores(ang)
-            self.sim.actualizar(*self._estado_para(ang))
+            est, cont = self._estado_para(ang)
+            fis = self._estado_fisico(ang)
+            if fis is not None and fis.get("q") is not None and np.all(np.isfinite(fis["q"])):
+                est = self._aplicar_desviacion(est, fis["q"], float(getattr(self.sim, "hud", {}).get("amplificacion", 1)))
+            self.sim.actualizar(est, cont)
+            self._hud_y_fuerzas(ang, fis)
         except Exception:
             if self._anim.isActive() and runtime.estado.simulacion.detener_invalido:
                 self._pausar()          # estado matemáticamente inválido: no seguir calculando a cada tick
@@ -358,19 +462,27 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
             w.setEnabled(auto)
         self._emitir_estado()
 
+    def linea_tiempo_para(self, perfil, avisos: list | None = None) -> LineaTiempo:
+        """Línea de tiempo REPRODUCIDA para `perfil`: misma construcción y mismo encaje en el recorrido que usa
+        la simulación (la referencia temporal común del régimen cinemático y del de contacto)."""
+        avisos = [] if avisos is None else avisos
+        lt = LineaTiempo.construir(perfil, RegistroLeyes())
+        avisos += list(lt.errores[-3:])
+        rango = self._rango_angulo_auto()
+        if rango is not None:       # el recorrido debe caber (Trocoidal: X = prrp·θ en [0, L])
+            lt, f, off, recortada = lt.ajustada(*rango, escalar=self.ui.checkBox_valpredeterminados.isChecked())
+            if f < 1.0:
+                avisos.append(f"preset escalado ×{f:.3f} para que el piñón no salga del mecanismo")
+            if off:
+                avisos.append(f"recorrido desplazado {off:+.1f}° para quedar dentro del rango")
+            if recortada:
+                avisos.append("el perfil excede el recorrido permitido: se recortó")
+        return lt
+
     def _construir_linea_tiempo(self):
         try:
-            lt = LineaTiempo.construir(self.perfil_mov, RegistroLeyes())
-            avisos = list(lt.errores[-3:])
-            rango = self._rango_angulo_auto()
-            if rango is not None:       # el recorrido debe caber (Trocoidal: X = prrp·θ en [0, L])
-                lt, f, off, recortada = lt.ajustada(*rango, escalar=self.ui.checkBox_valpredeterminados.isChecked())
-                if f < 1.0:
-                    avisos.append(f"preset escalado ×{f:.3f} para que el piñón no salga del mecanismo")
-                if off:
-                    avisos.append(f"recorrido desplazado {off:+.1f}° para quedar dentro del rango")
-                if recortada:
-                    avisos.append("el perfil excede el recorrido permitido: se recortó")
+            avisos = []
+            lt = self.linea_tiempo_para(self.perfil_mov, avisos)
             self.linea_tiempo = lt
             if avisos:
                 self.statusBar().showMessage("Aviso: " + " | ".join(avisos), 8000)
@@ -387,7 +499,8 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
 
     def _clave_linea(self) -> str:
         """Qué define la línea de tiempo: perfil de movimiento, si es el preset y el recorrido permitido."""
-        return json.dumps([self._proyecto_dict()["perfil_movimiento"], self._rango_angulo_auto(),
+        pm = None if self.ui.checkBox_valpredeterminados.isChecked() else self.perfil_mov.to_dict()
+        return json.dumps([pm, self._rango_angulo_auto(),
                            self.ui.checkBox_valpredeterminados.isChecked()], sort_keys=True, default=str)
 
     def _reconstruir_auto(self):
@@ -396,12 +509,96 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
         self._clave_lt = self._clave_linea()
         self._t = self.linea_tiempo.t_ini if self.linea_tiempo else 0.0
         self._mostrar_auto()
+        self.gestor_estudio.verificar()
 
     @manejador_seguro
     def _editar_linea_tiempo(self, *_):
+        """Botón de la línea de tiempo = editor de regímenes (cinemático y dinámico/contacto)."""
+        if self._editor is not None:
+            try:
+                if self._editor.isVisible():
+                    self._editor.raise_(); self._editor.activateWindow()
+                    return self._editor
+            except RuntimeError:            # ya destruido (WA_DeleteOnClose)
+                pass
         self._editor = VentanaPerfilVelocidad(self.perfil_mov, self, rango=self._rango_angulo_auto())
         self._editor.perfilAceptado.connect(self._perfil_aceptado)
         self._editor.show()
+        return self._editor
+
+    # -- régimen de contacto: estado, consulta e inspección sobre la geometría ---------------------------
+    def _estado_estudio(self, estado: str, detalle: str) -> None:
+        u = self.ui
+        if not hasattr(u, "lblEstadoSolucionador"):
+            return
+        if estudio_qt.contacto_habilitado():
+            txt = f"Simulación por contacto ACTIVA · {estado}"
+            if estado in (estudio_qt.SIN_ESTUDIO, estudio_qt.DESACTUALIZADO, estudio_qt.CANCELADO):
+                txt += " (▶ en Automático la calcula)"
+            elif estado == estudio_qt.ERROR:
+                txt += f": {detalle}"
+        else:
+            txt = f"Estudio físico: {estado} (simulación por contacto desactivada en Ajustes)"
+        u.lblEstadoSolucionador.setText(txt)
+        u.lblEstadoSolucionador.setToolTip(detalle or estado)
+        u.btnVerResultados.setEnabled(self.gestor_estudio.valido())
+        self._emitir_estado()
+
+    @manejador_seguro
+    def _ver_resultados_estudio(self, *_):
+        if not self.gestor_estudio.valido():
+            self._aviso("No hay un estudio físico válido para consultar.")
+            return
+        ed = self._editar_linea_tiempo()
+        if ed is not None and getattr(ed, "dinamico", None) is not None:
+            ed.dinamico.ver_resultados()
+
+    @manejador_seguro
+    def _inspeccionar_estudio(self, t: float) -> None:
+        """Cursor del editor -> la geometría de la ventana muestra el estado calculado en t."""
+        if not self.gestor_estudio.valido():
+            return
+        if not self._es_auto():                 # el estudio vive en la línea de tiempo: se pasa a Automático
+            self.ui.comboBox_modo_sim.setCurrentIndex(1)
+        if self.linea_tiempo is None:
+            return
+        self._pausar()
+        self._t = float(min(max(t, self.linea_tiempo.t_ini), self.linea_tiempo.t_fin))
+        self._mostrar_auto()
+
+    def _mapa_salida(self, angulo_grados: float) -> float:
+        """Coordenada cinemática de la salida (° o mm) para el ángulo de entrada (mapa, no tiempo)."""
+        est = self._resolver_estado(self._alterno(), angulo_grados)
+        if self.LINEAL:
+            return float(est.centro_pinon[0] if self._alterno() else est.traslacion_patron[0])
+        return float(np.degrees(est.angulo_relativo_generatriz_rad if self._alterno() else est.angulo_patron_rad))
+
+    def _hud_y_fuerzas(self, ang: float, fis=None) -> None:
+        sim = self.sim
+        if not hasattr(sim, "set_datos_hud"):
+            return
+        h = 1e-3
+        try:
+            rel = (self._mapa_salida(ang + h) - self._mapa_salida(ang - h)) / (2 * h)
+        except Exception:
+            rel = float("nan")
+        if fis is not None and fis.get("w_in") is not None:        # estado físico (dinámica o manual)
+            w_in = fis["w_in"]
+        elif self._es_auto() and self.linea_tiempo is not None:     # velocidad de la línea de tiempo, no de los FPS
+            w_in = float(np.interp(self._t, self.linea_tiempo.t, self.linea_tiempo.vel))
+        else:
+            w_in = self._omega_manual()                              # derivada del control respecto al reloj real
+        sim.manual_estimada = not self._es_auto()
+        sim.set_datos_hud(w_in, None if w_in is None else rel * w_in, self.LINEAL, rel)
+        if fis is None:
+            sim.set_fuerzas()
+            return
+        cs = fis.get("cs") or []
+        if cs:
+            sim.set_fuerzas([c["px"] for c in cs], [c["py"] for c in cs], [c["Fn"] * c["nx"] for c in cs],
+                            [c["Fn"] * c["ny"] for c in cs], fis.get("texto", ""))
+        else:
+            sim.set_fuerzas(texto=fis.get("texto", ""))
 
     @manejador_seguro
     def _perfil_aceptado(self, perfil):
@@ -416,9 +613,28 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
         lt = self.linea_tiempo
         if not self._es_auto() or lt is None or self._anim.isActive():
             return
+        g = self.gestor_estudio
+        if estudio_qt.contacto_habilitado() and not g.valido():
+            # el régimen de contacto GOBIERNA: primero se calcula la dinámica y luego se reproduce
+            if g.calculando():
+                self._reproducir_tras_estudio = True
+                return
+            if g.ejecutar(self.perfil_mov, g.escenario_vigente()):
+                self._reproducir_tras_estudio = True
+                self.statusBar().showMessage("Calculando la simulación por contacto… se reproducirá al terminar.", 6000)
+                return
+            self._aviso(f"Simulación por contacto no ejecutable ({g.detalle}); se reproduce la cinemática.", 8000)
         if self._t >= lt.t_fin:
             self._t = lt.t_ini
         self._arrancar()
+
+    def _estudio_listo(self, *_):
+        self._emitir_estado()
+        if self._reproducir_tras_estudio:
+            self._reproducir_tras_estudio = False
+            if self._es_auto() and self.linea_tiempo is not None and self.gestor_estudio.valido():
+                self._t = self.linea_tiempo.t_ini
+                self._arrancar()
 
     def _arrancar(self):
         self._t_ultimo = time.perf_counter()
@@ -431,6 +647,8 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
         """Tras Aplicar/Aceptar en Ajustes: nueva cadencia visual (no altera el tiempo simulado)."""
         sim = estado.simulacion
         self._scheduler.set_preferences(sim.fps, sim.fps_personalizado, sim.bajar_fps_inactivo)
+        self.gestor_estudio.verificar()             # nueva discretización o contacto (des)activado
+        self._estado_estudio(self.gestor_estudio.estado, self.gestor_estudio.detalle)
         self._configurar_autoguardado()
         try:                                       # nueva discretización/tolerancia => otra geometría (sin reiniciar)
             p = self.leer_parametros()
@@ -557,11 +775,13 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
 
     def _proyecto_dict(self) -> dict:
         pm = None if self.ui.checkBox_valpredeterminados.isChecked() else self.perfil_mov
-        return file_handler.serializar(self.SISTEMA, self.leer_parametros(), self._sim_dict(), pm, self.vis)
+        return file_handler.serializar(self.SISTEMA, self.leer_parametros(), self._sim_dict(), pm, self.vis,
+                                       self.gestor_estudio.to_dict())
 
     def _guardar_en(self, ruta) -> None:
         pm = None if self.ui.checkBox_valpredeterminados.isChecked() else self.perfil_mov
-        file_handler.guardar_proyecto(ruta, self.SISTEMA, self.leer_parametros(), self._sim_dict(), pm, self.vis)
+        file_handler.guardar_proyecto(ruta, self.SISTEMA, self.leer_parametros(), self._sim_dict(), pm, self.vis,
+                                      self.gestor_estudio.to_dict())
 
     @manejador_seguro
     def _guardar(self, *_):
@@ -611,11 +831,13 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
         self._recalcular()                      # antes que el control: en lineal fija el rango de X
         self.control.reiniciar(float(s.get("valor_manual", s.get("angulo_manual", 0.0))))
         self._aplicar_modo()
+        self.gestor_estudio.cargar(d.get("estudio"))      # proyectos anteriores: sin sección -> «Sin estudio»
 
     # -- sesión, autoguardado y cambios sin guardar (Ajustes → General) -----------------------------------
     def _huella_cambios(self) -> str:
         d = self._proyecto_dict()
         d["simulacion"].pop("valor_manual", None)       # girar el dial no cuenta como «trabajo sin guardar»
+        d["estudio_dinamico"] = self.gestor_estudio.huella_config()
         return json.dumps(d, sort_keys=True, default=str)
 
     def _marcar_limpio(self) -> None:
@@ -755,6 +977,8 @@ class VentanaSistemaBase(QtWidgets.QMainWindow):
             return
         self._pausar()
         self._t_auto.stop()
+        self.gestor_estudio.cancelar()             # cancelación cooperativa: el hilo termina en la muestra en curso
+        self.gestor_estudio.esperar(10000)
         self._guardar_sesion()
         sesion.borrar(sesion.ruta_autoguardado(self.SISTEMA))
         for w in list(self._aux):

@@ -152,3 +152,9 @@ class ThemeManager(QtCore.QObject):
                     f.setBold(v.negrita_graficas)
                     textitem.setFont(f)
         # Respetar la elección de visibilidad del usuario: no invocar showGrid().
+        cb=getattr(plot,'_retemar',None)       # gráficas con curvas propias (editor de regímenes, estudio)
+        if callable(cb):
+            try:
+                cb()
+            except Exception as e:
+                print(f'[tema] no se pudo recolorear {type(plot).__name__}: {e}')

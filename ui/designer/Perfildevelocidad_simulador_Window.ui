@@ -897,8 +897,8 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>662</width>
-                       <height>550</height>
+                       <width>674</width>
+                       <height>544</height>
                       </rect>
                      </property>
                      <layout class="QVBoxLayout" name="layoutPaginaAccionamiento">
@@ -936,32 +936,7 @@
                        </layout>
                       </item>
                       <item>
-                       <layout class="QHBoxLayout" name="comboModoAccionamientoFila">
-                        <item>
-                         <widget class="QLabel" name="lblComboModoAccionamiento">
-                          <property name="text">
-                           <string>Modo de evaluación</string>
-                          </property>
-                          <property name="wordWrap">
-                           <bool>true</bool>
-                          </property>
-                         </widget>
-                        </item>
-                        <item>
-                         <widget class="QComboBox" name="comboModoAccionamiento">
-                          <item>
-                           <property name="text">
-                            <string>Movimiento impuesto</string>
-                           </property>
-                          </item>
-                          <item>
-                           <property name="text">
-                            <string>Evaluación de capacidad del motor</string>
-                           </property>
-                          </item>
-                         </widget>
-                        </item>
-                       </layout>
+                       <layout class="QHBoxLayout" name="comboModoAccionamientoFila"/>
                       </item>
                       <item>
                        <layout class="QHBoxLayout" name="spinPotenciaNominalFila">
@@ -997,37 +972,7 @@
                        </layout>
                       </item>
                       <item>
-                       <layout class="QHBoxLayout" name="spinVelocidadNominalFila">
-                        <item>
-                         <widget class="QLabel" name="lblSpinVelocidadNominal">
-                          <property name="text">
-                           <string>Velocidad nominal</string>
-                          </property>
-                          <property name="wordWrap">
-                           <bool>true</bool>
-                          </property>
-                         </widget>
-                        </item>
-                        <item>
-                         <widget class="QDoubleSpinBox" name="spinVelocidadNominal">
-                          <property name="suffix">
-                           <string> rpm</string>
-                          </property>
-                          <property name="decimals">
-                           <number>3</number>
-                          </property>
-                          <property name="minimum">
-                           <double>0.000000000000000</double>
-                          </property>
-                          <property name="maximum">
-                           <double>100000.000000000000000</double>
-                          </property>
-                          <property name="singleStep">
-                           <double>0.001000000000000</double>
-                          </property>
-                         </widget>
-                        </item>
-                       </layout>
+                       <layout class="QHBoxLayout" name="spinVelocidadNominalFila"/>
                       </item>
                       <item>
                        <layout class="QHBoxLayout" name="spinParRetencionFila">
